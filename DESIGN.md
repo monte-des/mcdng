@@ -1,10 +1,10 @@
 # MCdng design
 
-The visual system of MCdng since 28 October 2026. It mixes two references the owner chose: Figma's black-and-white chrome with pill controls and almost no shadows, and Clay's warm ground and soft radii. Colour comes from two sources only: the codes (user data) and four pastel zone gradients, one per section, used on active states. All values live as custom properties at the top of `src/styles.css`.
+The visual system of MCdng since 28 October 2026. It mixes two references the owner chose: Figma's black-and-white chrome with pill controls and almost no shadows, and Clay's soft radii; the ground was Clay's warm white until 20 November 2026, when the owner asked for a neutral near-white. Colour comes from two sources only: the codes (user data) and four pastel zone gradients, one per section, used on active states. Insights is a tab of the Codebook since the same day, so the top bar has four sections. All values live as custom properties at the top of `src/styles.css`.
 
 ## Principles
 
-- The paper is the calmest, largest thing on the coding screen; chrome stays black, white and warm grey.
+- The paper is the calmest, largest thing on the coding screen; chrome stays black, white and neutral grey.
 - Every work area is a white sheet on the ground. Sheets have a 1px inset edge and no shadow.
 - Shadows only on what floats: the segment editor, dialogs, toasts.
 - Colour on the interface is pastel, with black text on top. No saturated chrome colour.
@@ -14,11 +14,11 @@ The visual system of MCdng since 28 October 2026. It mixes two references the ow
 
 | Role | Light | Dark |
 | --- | --- | --- |
-| Ground `--bg` | `#f5f4f0` | `#0f0f0f` |
+| Ground `--bg` | `#f6f6f8` | `#0f0f0f` |
 | Sheet `--surface` | `#ffffff` | `#1a1a1a` |
-| Soft fill `--surface-2` / track `--surface-3` | `#f5f4f0` / `#ebe9e3` | `#232323` / `#2e2e2e` |
-| Ink / secondary / muted | `#0d0d0d` / `#3a3a3a` / `#696964` | `#f3f3f0` / `#cfcfca` / `#a3a39d` |
-| Edges `--rule` / `--rule-soft` / `--rule-strong` | `#e8e6e0` / `#f0eee9` / `#d4d1c9` | `#2b2b2b` / `#242424` / `#3d3d3d` |
+| Soft fill `--surface-2` / track `--surface-3` | `#f4f4f6` / `#eaeaee` | `#232323` / `#2e2e2e` |
+| Ink / secondary / muted | `#0d0d0d` / `#3a3a3f` / `#67676e` | `#f3f3f0` / `#cfcfca` / `#a3a39d` |
+| Edges `--rule` / `--rule-soft` / `--rule-strong` | `#e6e6ea` / `#f0f0f3` / `#d2d2d8` | `#2b2b2b` / `#242424` / `#3d3d3d` |
 | Primary (pill fill) | `#0d0d0d`, white text | `#f3f3f0`, black text |
 | Memo (sticky note) | `#f6efd9` | `#312b1c` |
 
@@ -32,7 +32,6 @@ Each section sets `body[data-view]`, which picks its zone. A zone has a gradient
 | Coding | `#c9b8f5 → #e8c9ef` | `#efe9fc` |
 | Review | `#f7c5d6 → #ffd3b8` | `#fde8ea` |
 | Codebook | `#f4dc9e → #f8c9a7` | `#fbefd8` |
-| Insights | `#b8e2ef → #c9d2fb` | `#e3f1f7` |
 
 Where a zone appears: the 2px edge of the current section in the top bar, the 2px edge of the selected Review card, the chosen coding approach in the Framework (filled), the drop-files overlay; tints on the selected document row, the selected code in the Codebook, the active option and the quote in the segment editor.
 
@@ -50,7 +49,7 @@ Where a zone appears: the 2px edge of the current section in the top bar, the 2p
 
 ## Components
 
-- **Top bar**: the wordmark alone on the left; the five sections as an inset track (`--surface-3`) in the middle, the current one raised in white with its zone gradient as a 2px edge; save status (coloured dot and text) and the round project button on the right.
+- **Top bar**: the wordmark alone on the left; the four sections as an inset track (`--surface-3`) in the middle, the current one raised in white with its zone gradient as a 2px edge; save status (coloured dot and text) and the round project button on the right.
 - **Segmented controls and side tabs**: the same inset track, the selected option raised in white with a hairline.
 - **Buttons**: secondary is white with a 1px inset edge; primary is the black pill; subtle is text only; disabled primary is `--primary-disabled` with muted text.
 - **Inputs**: white, 12px radius, 1px inset edge; focus thickens the edge to ink.

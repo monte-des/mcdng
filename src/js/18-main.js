@@ -1,13 +1,14 @@
 // App shell: start screen, top bar, navigation between sections and project lifecycle.
 
-const SECTIONS = [['documents', 'Documents'], ['coding', 'Coding'], ['review', 'Review'], ['codebook', 'Codebook'], ['insights', 'Insights']];
+// Insights is a tab of the Codebook.
+const SECTIONS = [['documents', 'Documents'], ['coding', 'Coding'], ['review', 'Review'], ['codebook', 'Codebook']];
 
 const App = {
   views: {},
   current: null,
 
   init() {
-    this.views = { documents: new DocumentsView(), coding: new CodingView(), review: new ReviewView(), codebook: new CodebookView(), insights: new InsightsView() };
+    this.views = { documents: new DocumentsView(), coding: new CodingView(), review: new ReviewView(), codebook: new CodebookView() };
     this.nav = h('nav', { class: 'nav', 'aria-label': 'Sections' }, SECTIONS.map(([key, label]) => h('button', {
       type: 'button', text: label, dataset: { view: key }, onclick: () => this.go(key),
     })));

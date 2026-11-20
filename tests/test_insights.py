@@ -21,7 +21,7 @@ async def main():
         assert not wrong
 
         await newproject(pg)
-        await pg.click('.nav >> text=Insights')
+        await pg.click('.nav >> text=Codebook'); await pg.click('.view-codebook header nav.segmented >> text=Insights')
         print('empty:', await pg.inner_text('.view-insights .empty-title'))
         await pg.click('.nav >> text=Coding')
         await pg.select_option('.doc-picker', label=await pg.evaluate("[...document.querySelectorAll('.doc-picker option')].find(o=>o.text.startsWith('Smith')).text"))
@@ -38,7 +38,7 @@ async def main():
         await code(pg, 'Support from school leadership', ['Collaboration'])
 
         # Overview
-        await pg.click('.nav >> text=Insights'); await pg.wait_for_selector('.insight')
+        await pg.click('.nav >> text=Codebook'); await pg.click('.view-codebook header nav.segmented >> text=Insights'); await pg.wait_for_selector('.insight')
         print('sections:', await pg.eval_on_selector_all('.insight-title', 'els => els.map(e => e.textContent)'))
         themes = await pg.eval_on_selector_all('.insight:nth-of-type(1) tbody tr', 'rows => rows.map(r => [...r.cells].map(c => c.innerText.trim()).join(" | "))')
         print('themes:'); [print('  ', t) for t in themes]
@@ -92,7 +92,7 @@ async def main():
         await pg.screenshot(path=shot('s31-review-keyword.png'))
 
         # Print
-        await pg.click('.nav >> text=Insights'); await pg.click('.view-insights .segmented >> text=Overview')
+        await pg.click('.nav >> text=Codebook'); await pg.click('.view-codebook header nav.segmented >> text=Insights'); await pg.click('.view-insights .segmented >> text=Overview')
         await pg.evaluate("window.print = () => {}"); await pg.click('text=Print or save as PDF')
         await pg.emulate_media(media='print'); await pg.wait_for_timeout(200)
         await pg.screenshot(path=shot('s32-print.png'), full_page=True)

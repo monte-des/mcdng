@@ -48,8 +48,8 @@ On the page of an article, or on its PDF (also a PDF shown inside a page, as on 
 - **Documents**: import PDF, Word (.docx) and text files. Titles, authors, journal, year and DOI are read from the file; with a connection, Crossref (or DataCite) completes them. Edit details and custom fields: text, options ticked in any number (such as Q1, Q2, Q3, SB) or coloured tags; options and tags also filter the Review.
 - **Coding**: read a document as pages or as text, select a passage and assign codes and a memo.
 - **Review**: filter and group coded segments; export them as CSV with their document metadata and the code hierarchy split into level columns (one row per segment, one row per segment and code, or a code matrix).
-- **Codebook**: code definitions, framework, journal and the full change history. Nothing is deleted: codes are archived or merged, and every saved change is kept.
-- **Insights**: an overview of the emerging themes and the keywords of the coded segments. Every table exports to CSV and the page prints or saves as PDF.
+- **Codebook**: code definitions, framework, journal, the full change history and Insights. Nothing is deleted: codes are archived or merged, and every saved change is kept.
+  - **Insights** (the last tab): an overview of the emerging themes and the keywords of the coded segments. Every table exports to CSV and the page prints or saves as PDF.
 
 ## Building
 
@@ -80,7 +80,7 @@ Files in `src/js/` are concatenated in name order into one module:
 | `13-codebook.js` | Codebook section |
 | `14-text.js` | Tokens, English stopwords and the Porter stemmer (no dependencies) |
 | `15-analysis.js` | Keyword statistics, distinctiveness, theme overview, co-occurrence and similarity |
-| `16-insights.js` | Insights section: Overview and Keywords |
+| `16-insights.js` | Insights, a tab of the Codebook: Overview and Keywords |
 | `17-inbox.js` | Papers saved from the browser by the extension |
 | `17-transfer.js` | Project files: carrying a project between devices as a zip |
 | `18-main.js` | App shell and project lifecycle |

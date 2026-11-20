@@ -1,23 +1,23 @@
 /* Tokens
-   A warm white ground holds white sheets, one per work area. Chrome is black and white with pill controls;
+   A near-white neutral ground (no warm tint, owner's request of 20 November 2026) holds white sheets, one per work area. Chrome is black and white with pill controls;
    colour comes from the codes and from pastel zone gradients, one per section, used on active states. */
 
 :root {
   color-scheme: light;
-  --bg: #f5f4f0;
+  --bg: #f6f6f8;
   --surface: #ffffff;
-  --surface-2: #f5f4f0;
-  --surface-3: #ebe9e3;
+  --surface-2: #f4f4f6;
+  --surface-3: #eaeaee;
   --ink: #0d0d0d;
-  --ink-2: #3a3a3a;
-  --muted: #696964;
-  --rule: #e8e6e0;
-  --rule-soft: #f0eee9;
-  --rule-strong: #d4d1c9;
+  --ink-2: #3a3a3f;
+  --muted: #67676e;
+  --rule: #e6e6ea;
+  --rule-soft: #f0f0f3;
+  --rule-strong: #d2d2d8;
   --primary: #0d0d0d;
   --primary-hover: #2b2b2b;
   --on-primary: #ffffff;
-  --primary-disabled: #e6e4de;
+  --primary-disabled: #e6e6ea;
   --danger: #c4242a;
   --danger-soft: #fdeceb;
   --positive: #1f7a46;
@@ -36,7 +36,6 @@
   --z-coding: linear-gradient(115deg, #c9b8f5, #e8c9ef);
   --z-review: linear-gradient(115deg, #f7c5d6, #ffd3b8);
   --z-codebook: linear-gradient(115deg, #f4dc9e, #f8c9a7);
-  --z-insights: linear-gradient(115deg, #b8e2ef, #c9d2fb);
   --zone: var(--z-coding);
   --zone-tint: #efe9fc;
   --zone-ink: #6343c4;
@@ -59,7 +58,6 @@ body[data-view="documents"] { --zone: var(--z-documents); --zone-tint: #e6f3e2; 
 body[data-view="coding"] { --zone: var(--z-coding); --zone-tint: #efe9fc; --zone-ink: #6343c4; }
 body[data-view="review"] { --zone: var(--z-review); --zone-tint: #fde8ea; --zone-ink: #b8355f; }
 body[data-view="codebook"] { --zone: var(--z-codebook); --zone-tint: #fbefd8; --zone-ink: #985a12; }
-body[data-view="insights"] { --zone: var(--z-insights); --zone-tint: #e3f1f7; --zone-ink: #1d6784; }
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -99,7 +97,6 @@ body[data-view="insights"] { --zone: var(--z-insights); --zone-tint: #e3f1f7; --
   body[data-view="coding"] { --zone-tint: #2a2438; --zone-ink: #b9a3f5; }
   body[data-view="review"] { --zone-tint: #36222b; --zone-ink: #f49ab8; }
   body[data-view="codebook"] { --zone-tint: #33291b; --zone-ink: #f0c071; }
-  body[data-view="insights"] { --zone-tint: #1b2b32; --zone-ink: #8fd0e6; }
 }
 
 /* Base */
@@ -168,7 +165,6 @@ a:hover { text-decoration-color: var(--ink); }
 .nav button[data-view="coding"] { --z: var(--z-coding); }
 .nav button[data-view="review"] { --z: var(--z-review); }
 .nav button[data-view="codebook"] { --z: var(--z-codebook); }
-.nav button[data-view="insights"] { --z: var(--z-insights); }
 .nav button:hover { color: var(--ink); }
 /* The current section is raised in white inside the track, edged with its zone gradient. */
 .nav button.active {
@@ -944,6 +940,7 @@ select.input { padding-right: 6px; cursor: pointer; }
 /* Insights */
 
 .view-insights { display: flex; flex-direction: column; }
+.insights-bar { display: flex; align-items: center; gap: 12px; padding: 0 0 12px; }
 .insights-body { flex: 1; min-height: 0; overflow: auto; background: var(--surface); border-radius: var(--radius-sheet); box-shadow: inset 0 0 0 1px var(--rule); }
 .insights-page { display: flex; flex-direction: column; gap: 44px; padding: 28px 32px 64px; }
 .print-head { display: none; }
@@ -1078,8 +1075,8 @@ mark.term { background: none; color: inherit; font-weight: 600; text-decoration:
   @page { margin: 14mm; }
   html, body { height: auto; overflow: visible; background: #fff; color: #000; }
   body { display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .topbar, .toasts, .view-header, .keyword-tools, .insight-head .btn, .action-col { display: none !important; }
-  .workspace, .view, .view-insights, .insights-body { height: auto; padding: 0; overflow: visible; background: none; box-shadow: none; border-radius: 0; }
+  .topbar, .toasts, .view-header, .insights-bar, .keyword-tools, .insight-head .btn, .action-col { display: none !important; }
+  .workspace, .view, .codebook-body, .view-insights, .insights-body { height: auto; padding: 0; overflow: visible; background: none; box-shadow: none; border-radius: 0; }
   .print-head { display: block; margin-bottom: 18px; }
   .print-title { font-weight: 600; font-size: 20px; letter-spacing: -0.015em; }
   .print-meta { color: #555; font-size: 12px; }

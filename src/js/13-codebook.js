@@ -156,6 +156,7 @@ class CodebookView extends View {
     this.editingEntry = null;
     this.historyKind = 'all';
     this.tabs = h('nav', { class: 'segmented', 'aria-label': 'Codebook sections' });
+    this.insights = new InsightsView();
     this.body = h('div', { class: 'codebook-body' });
     this.el.append(h('header', { class: 'view-header' }, h('h1', { class: 'view-title', text: 'Codebook' }), this.tabs), this.body);
     bus.on('project', () => {
@@ -170,6 +171,13 @@ class CodebookView extends View {
     this.renderTabs();
     const fresh = this.body.dataset.tab !== this.tab;
     this.body.dataset.tab = this.tab;
+    // Insights is a view of its own, kept up to date by its own topics while it is shown here.
+    if (this.tab === 'insights') {
+      if (fresh) this.body.replaceChildren(this.insights.el);
+      this.insights.show();
+      return;
+    }
+    this.insights.hide();
     if (this.tab === 'codes') this.renderCodes(fresh);
     else if (this.tab === 'framework') this.renderFramework(fresh || topics.has('all'));
     else if (this.tab === 'journal') this.renderJournal(fresh);
@@ -194,8 +202,18 @@ class CodebookView extends View {
     return ok;
   }
 
+  show() {
+    super.show();
+    if (this.tab === 'insights') this.insights.show();
+  }
+
+  hide() {
+    super.hide();
+    this.insights.hide();
+  }
+
   renderTabs() {
-    this.tabs.replaceChildren(...[['codes', 'Codes'], ['framework', 'Framework'], ['journal', 'Journal'], ['history', 'History']].map(([key, label]) => h('button', {
+    this.tabs.replaceChildren(...[['codes', 'Codes'], ['framework', 'Framework'], ['journal', 'Journal'], ['history', 'History'], ['insights', 'Insights']].map(([key, label]) => h('button', {
       type: 'button', text: label,
       class: this.tab === key ? 'active' : '',
       'aria-pressed': String(this.tab === key),

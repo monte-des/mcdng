@@ -23,7 +23,7 @@ A single HTML file that keeps each project as a readable folder on the owner's o
 - Sections: Documents (import, metadata, and custom fields: text, options such as Q1–Q3 and SB, coloured tags), Coding (Pages and Text views of a paper, selection and the segment editor), Review (filters, grouped segment cards, document preview, CSV export), Codebook (codes, framework, journal, history).
 - Papers are in English. The interface is entirely in English; conversation with the owner is in Italian.
 - Codes carry one of 18 palette colours; overlapping codes show as diagonal stripes; coding stripes sit in the reader's margin.
-- Sections also include Insights (themes and keywords, Phase 2). Phase 3 so far: bibliographic details from Crossref and the Save to MCdng browser extension; Zotero and BibTeX/RIS import are possible next steps.
+- Insights (themes and keywords, Phase 2) is the last tab of the Codebook since 20 November 2026. Phase 3 so far: bibliographic details from Crossref and the Save to MCdng browser extension; Zotero and BibTeX/RIS import are possible next steps.
 
 ## Capabilities and Constraints
 

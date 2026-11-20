@@ -397,7 +397,7 @@ Regole importanti:
   - Archive/Restore e "Show archived entries".
 - **History:** cronologia completa del progetto, filtrabile (code, framework, journal, documenti), con dettaglio espandibile del prima/dopo.
 
-### Insights (Fase 2)
+### Insights (Fase 2; dal 20 novembre 2026 ultima scheda del Codebook)
 Sezione con due schede. Tutto è calcolato dai segmenti visibili (con almeno un code attivo) e non viene salvato, quindi i numeri coincidono sempre con Review e Codebook.
 - **Overview**, centrata sui temi che affiorano (l'utente non voleva numeri di avanzamento):
   - *Themes*: per ogni code, con i sottocodici, segmenti, paper in cui compare ("2 of 12"), quota sui segmenti codificati (barra) e le parole più tipiche. Il nome apre le keyword del tema; il numero apre la Review filtrata.
@@ -552,6 +552,9 @@ L'utente ha giudicato il risultato "un ottimo inizio, buon funzionamento".
 **Quinta chat (19–20 novembre 2026):**
 15. **Estensione "Impossibile accedere al file"**: Chrome legge un'estensione non pacchettizzata dalla sua cartella; i file erano stati spostati o tolti da iCloud ("Ottimizza spazio"). Spiegato all'utente di tenere la cartella fuori da iCloud e ricaricarla.
 16. **GitHub e iPad**: repository `monte-des/mcdng`, pubblicazione su GitHub Pages, versione per iPad con progetti su Google Drive, Apple Pencil e interfaccia al tocco, conflitti tra dispositivi anche sul Mac (vedi sezione 5 "iPad e Google Drive").
+17. **File di progetto** (zip attraverso File, anche iCloud): vedi sezione 5.
+18. **Insights dentro Codebook**: Insights non è più una sezione della barra in alto ma l'ultima scheda del Codebook, dopo History (`CodebookView` crea `InsightsView` e la mostra o nasconde; la vista tiene i suoi topic e le sue sotto-schede Overview e Keywords, con "Print or save as PDF" nella riga sotto le schede). La zona azzurra di Insights è stata tolta.
+19. **Fondo neutro**: il fondo e i grigi non hanno più la tinta calda (`--bg` #f6f6f8). Due bozze di restyle (Material 3 completo, poi colori di sezione sui pulsanti) sono state mostrate e rifiutate dall'utente; non sono state pubblicate.
 
 **Quarta chat (1 novembre 2026):**
 13. **Campi dei documenti di tipo Options e Tags** (vedi Documents e il modello dati); domanda dell'utente: Q1, Q2, Q3, SB a scelta multipla e tag colorati.

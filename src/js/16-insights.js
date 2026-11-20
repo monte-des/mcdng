@@ -1,5 +1,6 @@
 // Insights: the themes emerging from the coding, how they spread across papers and connect, and the
 // keywords of the coded segments. Every table exports to CSV, and the page prints or saves as PDF.
+// It is the last tab of the Codebook (since 20 November 2026): CodebookView shows and hides it.
 
 const SHOWN_TERMS = 200;
 const SHOWN_PAIRS = 15;
@@ -36,8 +37,7 @@ class InsightsView extends View {
     this.body = h('div', { class: 'insights-body' });
     this.printHead = h('div', { class: 'print-head' });
     this.el.append(
-      h('header', { class: 'view-header' },
-        h('h1', { class: 'view-title', text: 'Insights' }),
+      h('div', { class: 'insights-bar' },
         this.tabs,
         h('span', { class: 'spacer' }),
         h('button', { type: 'button', class: 'btn', text: 'Print or save as PDF', onclick: () => this.print() })),
