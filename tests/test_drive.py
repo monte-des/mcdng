@@ -40,7 +40,8 @@ async def main():
         await pg.screenshot(path=shot('d01-start.png'))
 
         # A new project: sign in with Google, come back, name it.
-        await pg.click('text=New project on Google Drive')
+        await pg.click('.start-actions >> text=New project')
+        await pg.click('dialog button >> text=On Google Drive')
         await pg.wait_for_selector('dialog .input')
         print('signed in with:', {k: drive.signins[0][k] for k in ('client_id', 'redirect_uri', 'response_type', 'scope')})
         await pg.fill('dialog .input', 'Literature review'); await pg.keyboard.press('Enter')

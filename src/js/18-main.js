@@ -23,7 +23,7 @@ const App = {
     this.main = h('main', { class: 'workspace' }, Object.values(this.views).map(v => v.el));
     document.body.append(this.topbar, this.start, this.main);
 
-    Disk.store = Disk.mode === 'folder' ? FolderStore : DriveStore;
+    Disk.store = Disk.mode === 'folder' ? FolderStore : DeviceStore;
     bus.on('save', () => this.renderStatus());
     bus.on('sync', () => this.renderStatus());
     bus.on('meta', () => this.renderProjectName());
@@ -94,22 +94,57 @@ const App = {
         reopen,
         h('button', { type: 'button', class: `btn large${reopen ? '' : ' primary'}`, text: 'New project', onclick: () => this.chooseFolder(true) }),
         h('button', { type: 'button', class: 'btn large', text: 'Open project', onclick: () => this.chooseFolder(false) })));
-    } else if (Google.usable) {
-      const remembered = await DriveStore.remembered();
-      const reopen = remembered && h('button', { type: 'button', class: 'btn primary large', text: `Reopen “${remembered.name}”`, onclick: () => this.openDrive(remembered) });
+    } else {
+      // Where folders cannot be opened (iPad): projects on Google Drive, kept in step automatically, and project
+      // files opened from Files (iCloud Drive or anywhere), kept on this device.
+      const remembered = await DeviceStore.remembered();
+      const reopen = remembered && (remembered.device || Google.usable) && h('button', {
+        type: 'button', class: 'btn primary large', text: `Reopen “${remembered.name}”`,
+        onclick: () => (remembered.device ? this.openDevice(remembered) : this.openDrive(remembered)),
+      });
+      const lead = reopen ? '' : ' primary';
       panel.append(h('div', { class: 'start-actions' },
         reopen,
-        h('button', { type: 'button', class: `btn large${reopen ? '' : ' primary'}`, text: 'Open from Google Drive', onclick: () => this.chooseDrive() }),
-        h('button', { type: 'button', class: 'btn large', text: 'New project on Google Drive', onclick: () => this.newDrive() })));
-    } else {
-      panel.append(h('p', {
-        class: 'start-warning',
-        text: GOOGLE_CLIENT_ID
-          ? 'In this browser MCdng opens projects from Google Drive, which works from MCdng’s web address. On a computer, Google Chrome or Microsoft Edge also open project folders directly.'
-          : location.protocol === 'https:'
-            ? 'Google Drive is not set up in this copy of MCdng yet. On a computer, open MCdng in Google Chrome or Microsoft Edge to use project folders.'
-            : 'MCdng saves projects as folders on your computer, which needs Google Chrome or Microsoft Edge. Open this file in one of them.',
-      }));
+        Google.usable && h('button', { type: 'button', class: `btn large${lead}`, text: 'Open from Google Drive', onclick: () => this.chooseDrive() }),
+        h('button', { type: 'button', class: `btn large${Google.usable ? '' : lead}`, text: 'Open project file', onclick: () => Transfer.pick(file => Transfer.openHere(file)) }),
+        h('button', { type: 'button', class: 'btn large', text: 'New project', onclick: () => this.newHere() })));
+    }
+  },
+
+  // A new project where folders cannot be opened: on Google Drive, or on this device only.
+  async newHere() {
+    let where = 'device';
+    if (Google.usable) {
+      where = await Dialog.open({
+        title: 'New project',
+        body: [
+          h('p', { text: 'Where do you want to keep it?' }),
+          h('p', { class: 'muted', text: 'On Google Drive it stays in step with your other devices by itself. On this device only, you carry it as a project file through Files, for example on iCloud Drive.' }),
+        ],
+        buttons: [
+          { label: 'Cancel', result: null },
+          { label: 'On this device only', result: 'device' },
+          { label: 'On Google Drive', kind: 'primary', result: 'drive' },
+        ],
+      });
+    }
+    if (where === 'drive') return this.newDrive();
+    if (!where) return;
+    const name = await Dialog.prompt('New project', 'Project name', '', 'Create project');
+    if (!name) return;
+    const target = { id: `device:${uid()}`, name, device: true };
+    await DeviceStore.use(target);
+    await this.createProject(name);
+    await Memory.set(`device:${project.created}`, target).catch(() => {});
+  },
+
+  async openDevice(target) {
+    try {
+      await DeviceStore.use(target);
+      if (!await Disk.exists(PROJECT_FILE)) throw new Error('This project is no longer on this device. Open its project file again.');
+      await this.openProject();
+    } catch (err) {
+      Dialog.alert('The project could not be opened', err.message);
     }
   },
 
@@ -152,6 +187,7 @@ const App = {
     await Library.writeGuide();
     this.load(data);
     await Saver.remember(await Disk.readText(PROJECT_FILE));
+    await Transfer.load();
   },
 
   async createProject(name) {
@@ -161,6 +197,7 @@ const App = {
     await Library.writeGuide();
     this.load(data);
     await Saver.remember(text);
+    await Transfer.load();
   },
 
   // Google Drive. Each action that needs Drive signs in first when there is no valid token, leaving the page
@@ -214,7 +251,7 @@ const App = {
     const name = await Dialog.prompt('New project on Google Drive', 'Project name', '', 'Create project');
     if (!name) return;
     try {
-      await DriveStore.use(await Sync.createProject(name));
+      await DeviceStore.use(await Sync.createProject(name));
       await this.createProject(name);
       Sync.soon(0);
     } catch (err) {
@@ -233,7 +270,7 @@ const App = {
     }
     const progress = Toast.show(`Opening “${target.name}”…`, { timeout: 0 });
     try {
-      await DriveStore.use(target);
+      await DeviceStore.use(target);
       let remote = null;
       if (Google.token() && navigator.onLine) remote = await Sync.pull().catch(() => null);
       if (!await Disk.exists(PROJECT_FILE)) {
@@ -357,7 +394,7 @@ const App = {
     if (Disk.mode === 'drive') {
       // What is not sent now stays on the device and goes at the next opening.
       await Sync.push();
-      DriveStore.project = null;
+      DeviceStore.project = null;
     }
     bus.emit('project');
     this.renderProjectName();
@@ -379,7 +416,10 @@ const App = {
     else if (status === 'conflict' || this.pendingConflict) {
       [kind, text, action] = ['error', 'Changed on two devices', ['Choose', () => this.conflict(this.pendingConflict)]];
     } else if (Disk.mode === 'folder') text = 'All changes saved';
-    else {
+    else if (DeviceStore.project?.device) {
+      [kind, text] = ['saved', 'Saved on this device'];
+      if (Transfer.pending) action = ['Export', () => Transfer.export()];
+    } else {
       const sync = Sync.state;
       const down = Sync.downloads;
       if (sync === 'synced') [kind, text] = ['saved', down ? `On Drive · downloading ${down.done} of ${down.total}` : 'All changes on Drive'];
@@ -403,25 +443,36 @@ const App = {
   async signInAgain() {
     await Saver.flush();
     if (!navigator.onLine) return Sync.set('offline');
-    Google.signIn({ resume: { action: 'open', project: DriveStore.project, view: this.current } });
+    Google.signIn({ resume: { action: 'open', project: DeviceStore.project, view: this.current } });
   },
 
   async projectMenu() {
+    const device = Disk.mode === 'drive' && DeviceStore.project?.device;
+    const where = Disk.mode === 'folder'
+      ? `Saved in the folder “${Disk.name}”.`
+      : device
+        ? 'Kept on this device only. To work on it elsewhere, export the project file (to iCloud Drive, for example) and open it there; bring the changes back with Import changes from a file.'
+        : `Saved in the folder “${Disk.name}” on Google Drive, and on this device so it works offline.`;
+    const action = (label, result, hint) => ({ label, result, hint });
+    const actions = [
+      action('Export project file', 'export', 'A zip of the project for another device, through Files or the Finder.'),
+      // A Google Drive project is kept in step by itself, so it does not take changes from files.
+      (Disk.mode === 'folder' || device) && action('Import changes from a file', 'import', 'Brings in a project file exported on another device.'),
+      action('Rename project', 'rename'),
+      action('Close project', 'close'),
+    ].filter(Boolean);
     const choice = await Dialog.open({
       title: project.name,
-      body: h('p', {
-        class: 'muted',
-        text: Disk.mode === 'folder'
-          ? `Saved in the folder “${Disk.name}”. Each day you open the project, a copy of project.json is kept in its backups folder.`
-          : `Saved in the folder “${Disk.name}” on Google Drive, and on this device so it works offline. Each day you open the project, a copy of project.json is kept in its backups folder.`,
-      }),
-      buttons: [
-        { label: 'Close project', result: 'close' },
-        { label: 'Rename project', result: 'rename' },
-        { label: 'Done', kind: 'primary', result: null, submit: true },
+      body: finish => [
+        h('p', { class: 'muted', text: `${where} Each day you open the project, a copy of project.json is kept in its backups folder.` }),
+        h('div', { class: 'pick-list' }, actions.map(a => h('button', { type: 'button', class: 'pick-row', onclick: () => finish(a.result) },
+          h('span', { class: 'pick-name', text: a.label }), a.hint && h('span', { class: 'pick-meta', text: a.hint })))),
       ],
+      buttons: [{ label: 'Done', kind: 'primary', result: null, submit: true }],
     });
     if (choice === 'close') this.close();
+    if (choice === 'export') Transfer.export();
+    if (choice === 'import') Transfer.pick(file => Transfer.bringIn(file));
     if (choice === 'rename') {
       const name = await Dialog.prompt('Rename project', 'Project name', project.name);
       if (name) {
@@ -444,4 +495,4 @@ function folderIcon() {
 App.init();
 
 // For the browser console and the tests: the running app's state.
-globalThis.MCdng = { App, Sync, Saver, commit, get project() { return project; } };
+globalThis.MCdng = { App, Sync, Saver, Transfer, Zip, commit, get project() { return project; } };

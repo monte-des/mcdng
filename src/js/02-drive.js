@@ -305,9 +305,12 @@ const Mirror = {
   },
 };
 
-// The open Drive project, with the same interface as FolderStore.
-const DriveStore = {
-  project: null, // { id, name }: the project folder on Drive
+// The open project's files on this device, with the same interface as FolderStore. Two kinds of project live here:
+// a Google Drive project ({ id: the folder's id on Drive, name }), kept in step with Drive by Sync, and a project
+// kept only on this device ({ id: 'device:…', name, device: true }), which travels as a zip through the Files
+// app (17-transfer.js).
+const DeviceStore = {
+  project: null,
 
   get name() { return this.project.name; },
   get id() { return this.project.id; },
@@ -329,6 +332,12 @@ const DriveStore = {
 
   async hasDir(path) {
     return Boolean(await Mirror.get(this.id, path)) || (await Mirror.under(this.id, path)).length > 0;
+  },
+
+  // The files and folders directly inside a folder, as [{ name, dir }].
+  async list(path) {
+    const below = await Mirror.under(this.id, path);
+    return below.map(e => ({ name: e.path.slice(path.length + 1), dir: e.dir })).filter(e => !e.name.includes('/'));
   },
 
   // The content of a file, from the device or, the first time, from Drive.
@@ -442,7 +451,7 @@ const Sync = {
   },
 
   soon(delay = 1500) {
-    if (Disk.mode !== 'drive' || !DriveStore.project) return;
+    if (Disk.mode !== 'drive' || !DeviceStore.project || DeviceStore.project.device) return;
     if (this.state !== 'conflict') this.set(navigator.onLine ? 'pending' : 'offline');
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.push(), delay);
@@ -461,7 +470,7 @@ const Sync = {
   // since the last step, which the user then decides on.
   pull() {
     return this.run(async () => {
-      const project = DriveStore.id;
+      const project = DeviceStore.id;
       this.set('syncing');
       const remote = await DriveApi.tree(project);
       let conflict = null, changed = false;
@@ -509,8 +518,8 @@ const Sync = {
   push() {
     clearTimeout(this.timer);
     return this.run(async () => {
-      if (!DriveStore.project || this.state === 'conflict') return;
-      const project = DriveStore.id;
+      if (!DeviceStore.project || DeviceStore.project.device || this.state === 'conflict') return;
+      const project = DeviceStore.id;
       if (!navigator.onLine) return this.set('offline');
       if (!Google.token()) return this.set('signin');
       this.set('syncing');
@@ -533,13 +542,13 @@ const Sync = {
         // project.json goes last, so on Drive it never refers to a document whose files are not there yet.
         const dirty = entries.filter(e => e.dirty && !e.dir).sort((a, b) => (a.path === PROJECT_FILE) - (b.path === PROJECT_FILE));
         for (const entry of dirty) {
-          if (DriveStore.id !== project) return;
+          if (DeviceStore.id !== project) return;
           const cut = entry.path.lastIndexOf('/');
           const name = entry.path.slice(cut + 1);
           let done;
           if (entry.id) {
             if (entry.path === PROJECT_FILE && await this.changedOnDrive(entry)) return;
-            done = await DriveApi.update(entry.id, entry.blob ?? await DriveStore.blob(entry.path), name);
+            done = await DriveApi.update(entry.id, entry.blob ?? await DeviceStore.blob(entry.path), name);
           } else {
             const parent = await folder(cut < 0 ? '' : entry.path.slice(0, cut));
             done = entry.copyOf
@@ -582,7 +591,7 @@ const Sync = {
 
   // After the user decided: `keep` is 'here' or 'drive'; `remote` is the version on Drive.
   async settle(keep, remote) {
-    const project = DriveStore.id;
+    const project = DeviceStore.id;
     await Mirror.tx(['entries'], 'readwrite', async s => {
       const entry = await Mirror.req(s.entries.get([project, PROJECT_FILE]));
       if (keep === 'drive') {
@@ -599,7 +608,7 @@ const Sync = {
   // first, then the papers. Backups stay on Drive. Runs beside the sync steps, so changes keep going out.
   async prefetch() {
     if (this.downloads) return;
-    const project = DriveStore.id;
+    const project = DeviceStore.id;
     const wanted = (await Mirror.all(project))
       .filter(e => !e.dir && !e.blob && !e.path.startsWith('backups/'))
       .sort((a, b) => Number(!a.path.endsWith('.json')) - Number(!b.path.endsWith('.json')));
@@ -607,9 +616,9 @@ const Sync = {
     this.downloads = { done: 0, total: wanted.length };
     bus.emit('sync');
     for (const entry of wanted) {
-      if (DriveStore.id !== project || !navigator.onLine || !Google.token()) break;
+      if (DeviceStore.id !== project || !navigator.onLine || !Google.token()) break;
       // A file that cannot be downloaded now is tried again when it is opened.
-      await DriveStore.blob(entry.path).catch(() => {});
+      await DeviceStore.blob(entry.path).catch(() => {});
       this.downloads.done++;
       bus.emit('sync');
     }

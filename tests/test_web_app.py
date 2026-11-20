@@ -32,7 +32,7 @@ async def main():
         icon = await pg.evaluate("fetch('icons/icon-180.png').then(r => r.status)")
         start = await pg.eval_on_selector_all('.start-actions button', 'bs => bs.map(b => b.textContent)')
         print('offline:', await pg.inner_text('.start-title'), start, '| icon', icon)
-        assert start == ['Open from Google Drive', 'New project on Google Drive'] and icon == 200
+        assert start == ['Open from Google Drive', 'Open project file', 'New project'] and icon == 200
         print('ERRORS', errors)
         await b.close()
 

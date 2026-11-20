@@ -1,6 +1,6 @@
 // Where projects are stored. Two stores share one interface of paths inside the project folder:
 // - FolderStore: a folder on the computer, through the File System Access API (Chrome and Edge on a computer);
-// - DriveStore (02-drive.js): a folder on Google Drive, mirrored on the device so it works offline (iPad).
+// - DeviceStore (02-drive.js): a folder on Google Drive, mirrored on the device so it works offline (iPad).
 // The rest of the app only uses Disk, which forwards to the store in use.
 
 const Memory = {
@@ -103,6 +103,13 @@ const FolderStore = {
     await this.write(to, await (await this.file(from)).getFile());
   },
 
+  // The files and folders directly inside a folder, as [{ name, dir }].
+  async list(path) {
+    const out = [];
+    for await (const [name, handle] of (await this.dir(path.split('/'), false)).entries()) out.push({ name, dir: handle.kind === 'directory' });
+    return out;
+  },
+
   // Copies the files directly inside one folder into another; document folders have no subfolders.
   async copyDir(from, to) {
     const source = await this.dir(from.split('/'), false);
@@ -133,6 +140,7 @@ const Disk = {
   write(path, data) { return this.store.write(path, data); },
   hasDir(path) { return this.store.hasDir(path); },
   copyFile(from, to) { return this.store.copyFile(from, to); },
+  list(path) { return this.store.list(path); },
   copyDir(from, to) { return this.store.copyDir(from, to); },
   remove(path) { return this.store.remove(path); },
 };

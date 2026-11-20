@@ -26,9 +26,10 @@ Copy the folder to back up or move a project.
 
 ### On the iPad
 
-1. Open https://monte-des.github.io/mcdng/ in Safari, then Share → **Add to Home Screen**.
-2. Open MCdng from the Home Screen, choose **Open from Google Drive** and sign in with Google.
-3. Choose the project folder. Every file of the project is kept on the iPad too, so it works without a connection; changes go to Google Drive when there is one.
+Open https://monte-des.github.io/mcdng/ in Safari, then Share → **Add to Home Screen**. Projects open in two ways:
+
+- **Open from Google Drive**: sign in with Google and choose the project folder, the same one the computer opens through Google Drive for desktop. Every file of the project is kept on the iPad too, so it works without a connection; changes go to Google Drive by themselves when there is one.
+- **Open project file**: no account needed, and it works with iCloud Drive or anything the Files app reaches. On the computer, choose **Export project file** in the project menu (the folder button) and save the zip, for example on iCloud Drive; on the iPad, open it with Open project file. The project is then kept on the iPad. When you are done, tap **Export** next to the status and save the file; on the computer, choose **Import changes from a file**. A zip of the project folder made with the Finder's Compress opens too.
 
 With the Apple Pencil, draw over a passage to select it and code it, or tap a coded passage to open it. With a finger, scroll as usual; a long press selects text, and **Code selection** codes it.
 
@@ -64,7 +65,8 @@ Files in `src/js/` are concatenated in name order into one module:
 | --- | --- |
 | `01-util.js` | DOM helper, formatting, colors, CSV |
 | `02-disk.js` | Where projects are stored: folders on the computer (File System Access API), and the `Disk` interface |
-| `02-drive.js` | Projects on Google Drive: sign-in, the Drive API, the copy on the device and its sync |
+| `01-zip.js` | Reading and writing zip files (Word documents, project files) |
+| `02-drive.js` | Projects on the device: Google Drive sign-in, the Drive API, the copy on the device and its sync |
 | `03-project.js` | State, autosave, queries and all changes with the history log |
 | `04-extract.js` | PDF, DOCX and TXT text extraction, and what a PDF says about itself |
 | `05-metadata.js` | Bibliographic details: from the file, and from Crossref or DataCite |
@@ -80,6 +82,7 @@ Files in `src/js/` are concatenated in name order into one module:
 | `15-analysis.js` | Keyword statistics, distinctiveness, theme overview, co-occurrence and similarity |
 | `16-insights.js` | Insights section: Overview and Keywords |
 | `17-inbox.js` | Papers saved from the browser by the extension |
+| `17-transfer.js` | Project files: carrying a project between devices as a zip |
 | `18-main.js` | App shell and project lifecycle |
 
 `src/web/` holds the web app's service worker, manifest and Home Screen icons (with the script that draws them). `src/extension/` holds the extension's own files: `background.js` (Save to MCdng), the popup, and the icons with the script that draws them.

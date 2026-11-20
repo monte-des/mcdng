@@ -25,9 +25,14 @@ const Extract = {
   },
 
   async docx(bytes) {
-    const zip = new Zip(bytes);
+    let zip;
+    try {
+      zip = await Zip.read(new Blob([bytes]));
+    } catch {
+      throw new Error('This file is not a valid Word document.');
+    }
     if (!zip.has('word/document.xml')) throw new Error('This file is not a valid Word document.');
-    const xml = name => zip.text(name).then(text => new DOMParser().parseFromString(text, 'application/xml'));
+    const xml = async name => new DOMParser().parseFromString(new TextDecoder().decode(zip.get(name)), 'application/xml');
     const styles = zip.has('word/styles.xml') ? docxStyleNames(await xml('word/styles.xml')) : new Map();
     const paragraphs = docxParagraphs(await xml('word/document.xml'), styles);
     const meta = {};
@@ -252,46 +257,6 @@ const NS = {
   w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
   dc: 'http://purl.org/dc/elements/1.1/',
 };
-
-class Zip {
-  constructor(bytes) {
-    this.bytes = bytes;
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    this.view = view;
-    let eocd = -1;
-    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
-      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-    }
-    if (eocd < 0) throw new Error('This file is not a valid Word document.');
-    this.entries = new Map();
-    let p = view.getUint32(eocd + 16, true);
-    const count = view.getUint16(eocd + 10, true);
-    const decoder = new TextDecoder();
-    for (let i = 0; i < count; i++) {
-      const nameLength = view.getUint16(p + 28, true);
-      const name = decoder.decode(bytes.subarray(p + 46, p + 46 + nameLength));
-      this.entries.set(name, {
-        method: view.getUint16(p + 10, true),
-        size: view.getUint32(p + 20, true),
-        offset: view.getUint32(p + 42, true),
-      });
-      p += 46 + nameLength + view.getUint16(p + 30, true) + view.getUint16(p + 32, true);
-    }
-  }
-
-  has(name) {
-    return this.entries.has(name);
-  }
-
-  async text(name) {
-    const { method, size, offset } = this.entries.get(name);
-    const start = offset + 30 + this.view.getUint16(offset + 26, true) + this.view.getUint16(offset + 28, true);
-    const data = this.bytes.subarray(start, start + size);
-    if (method === 0) return new TextDecoder().decode(data);
-    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-    return new Response(stream).text();
-  }
-}
 
 function docxStyleNames(doc) {
   const names = new Map();
