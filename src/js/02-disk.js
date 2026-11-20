@@ -1,5 +1,7 @@
-// Reads and writes inside the project folder the user picked.
-// The folder handle is remembered in IndexedDB so the project can be reopened with one click.
+// Where projects are stored. Two stores share one interface of paths inside the project folder:
+// - FolderStore: a folder on the computer, through the File System Access API (Chrome and Edge on a computer);
+// - DriveStore (02-drive.js): a folder on Google Drive, mirrored on the device so it works offline (iPad).
+// The rest of the app only uses Disk, which forwards to the store in use.
 
 const Memory = {
   db: null,
@@ -27,9 +29,12 @@ const Memory = {
   set(key, value) { return this.request('readwrite', store => store.put(value, key)); },
 };
 
-const Disk = {
+// A project folder on the computer. The folder handle is remembered in IndexedDB so the project can be
+// reopened with one click.
+const FolderStore = {
   root: null,
-  supported: typeof window.showDirectoryPicker === 'function',
+
+  get name() { return this.root.name; },
 
   async use(handle) {
     const opts = { mode: 'readwrite' };
@@ -73,6 +78,12 @@ const Disk = {
     return new Uint8Array(await (await (await this.file(path)).getFile()).arrayBuffer());
   },
 
+  // When and how big the file was last written, to notice changes made by another device through a sync app.
+  async stamp(path) {
+    const file = await (await this.file(path)).getFile();
+    return `${file.lastModified}:${file.size}`;
+  },
+
   async write(path, data) {
     const writable = await (await this.file(path, true)).createWritable();
     await writable.write(data);
@@ -105,4 +116,23 @@ const Disk = {
     const name = parts.pop();
     await (await this.dir(parts, false)).removeEntry(name, { recursive: true });
   },
+};
+
+const Disk = {
+  // Folders on the computer where the browser can open them; Google Drive everywhere else (Safari, iPad).
+  // `?storage=drive` forces Drive, for testing in Chrome.
+  mode: new URLSearchParams(location.search).get('storage') === 'drive' || typeof window.showDirectoryPicker !== 'function'
+    ? 'drive' : 'folder',
+  store: null,
+
+  get name() { return this.store.name; },
+
+  exists(path) { return this.store.exists(path); },
+  readText(path) { return this.store.readText(path); },
+  readBytes(path) { return this.store.readBytes(path); },
+  write(path, data) { return this.store.write(path, data); },
+  hasDir(path) { return this.store.hasDir(path); },
+  copyFile(from, to) { return this.store.copyFile(from, to); },
+  copyDir(from, to) { return this.store.copyDir(from, to); },
+  remove(path) { return this.store.remove(path); },
 };

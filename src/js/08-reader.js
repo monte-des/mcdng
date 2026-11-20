@@ -66,6 +66,16 @@ function offsetAtPoint(root, node, offset) {
   return Number(last.dataset.s) + last.textContent.length;
 }
 
+// The text position under a point, as { node, offset }, or null.
+function caretAt(x, y) {
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    return range && { node: range.startContainer, offset: range.startOffset };
+  }
+  const pos = document.caretPositionFromPoint?.(x, y);
+  return pos && { node: pos.offsetNode, offset: pos.offset };
+}
+
 function selectionIn(root) {
   const sel = getSelection();
   if (!sel.rangeCount) return null;

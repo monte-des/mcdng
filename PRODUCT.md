@@ -27,7 +27,7 @@ A single HTML file that keeps each project as a readable folder on the owner's o
 
 ## Capabilities and Constraints
 
-- Chrome and Edge desktop only (File System Access API); opens from `file://` or as a browser extension; works fully offline, so only fonts inlined into the file. With a connection, Crossref and DataCite complete bibliographic details; without one, MCdng behaves the same and the details come from the file or by hand (owner's requirement, 31 October 2026).
+- On a computer: Chrome and Edge (File System Access API); opens from `file://`, as a browser extension or from its web address. On the iPad (8th generation, Apple Pencil 1st generation, from 20 November 2026): the web app on the Home Screen, with projects on Google Drive mirrored on the device; the same project folder is used on the Mac through Google Drive for desktop, one device at a time; works fully offline, so only fonts inlined into the file. With a connection, Crossref and DataCite complete bibliographic details; without one, MCdng behaves the same and the details come from the file or by hand (owner's requirement, 31 October 2026).
 - Save to MCdng (extension): saves the PDF of the article open in the browser, downloaded with the owner's own access, into the project open in MCdng. Highlighting on publishers' pages was considered and not chosen.
 - Built by `build.py` from plain JavaScript and CSS, no framework, as one HTML file and as an extension folder.
 - Code colours are user data and must stay legible as highlights over reading text in both themes.

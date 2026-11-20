@@ -26,6 +26,7 @@ class CodingView extends View {
 
     this.readerHost = h('div', { class: 'reader-host', tabIndex: -1 });
     this.readerHost.addEventListener('mouseup', event => this.onPointerUp(event));
+    this.listenForTouch();
 
     this.tabs = h('div', { class: 'side-tabs', role: 'tablist' });
     this.sideBody = h('div', { class: 'side-body' });
@@ -172,13 +173,112 @@ class CodingView extends View {
   onPointerUp(event) {
     if (event.button !== 0 || !this.reader || event.target.closest('.bar')) return;
     setTimeout(() => {
-      const sel = selectionIn(this.reader.root);
+      // A tap on a touch screen leaves no selection: the text under the finger counts, as a click's caret does.
+      const sel = selectionIn(this.reader.root) ?? this.pointIn(event.clientX, event.clientY);
       if (!sel) return;
       const rect = sel.rect.width || sel.rect.height ? sel.rect : new DOMRect(event.clientX, event.clientY, 0, 0);
       if (sel.collapsed) return this.openAt(sel.start, rect);
       const [start, end] = trimRange(this.content.text, Math.min(sel.start, sel.end), Math.max(sel.start, sel.end));
       if (end > start) this.codeSelection(start, end, rect);
     });
+  }
+
+  hide() {
+    super.hide();
+    this.codeButton.hidden = true;
+  }
+
+  // A collapsed selection at a point of the reader, or null outside its text.
+  pointIn(x, y) {
+    const caret = caretAt(x, y);
+    if (!caret || !this.reader.root.contains(caret.node)) return null;
+    const offset = offsetAtPoint(this.reader.root, caret.node, caret.offset);
+    return { start: offset, end: offset, collapsed: true, rect: new DOMRect(x, y, 0, 0) };
+  }
+
+  // Touch screens. The Apple Pencil works as a highlighter: drawing over text selects it and opens the editor,
+  // a tap opens the segment under it. A finger scrolls; a long press selects text as usual, and a Code button
+  // next to the selection codes it.
+  listenForTouch() {
+    const host = this.readerHost;
+    // Safari scrolls and starts its own selection on any touch; for the Pencil only, it is stopped here.
+    host.addEventListener('touchstart', event => {
+      if ([...event.touches].some(t => t.touchType === 'stylus')) event.preventDefault();
+    }, { passive: false });
+    host.addEventListener('pointerdown', event => this.penDown(event));
+    host.addEventListener('pointermove', event => this.penMove(event));
+    host.addEventListener('pointerup', event => this.penUp(event));
+    host.addEventListener('pointercancel', () => this.penEnd());
+    this.codeButton = h('button', {
+      type: 'button', class: 'btn primary small code-float', text: 'Code selection', hidden: true,
+      onpointerdown: event => event.preventDefault(),
+      onclick: () => this.codeTouchSelection(),
+    });
+    document.body.append(this.codeButton);
+    document.addEventListener('selectionchange', debounce(() => this.offerCodeButton(), 250));
+  }
+
+  penDown(event) {
+    if (event.pointerType !== 'pen' || event.button !== 0 || !this.reader || event.target.closest('.bar, button')) return;
+    const start = caretAt(event.clientX, event.clientY);
+    if (!start || !this.reader.root.contains(start.node)) return;
+    event.preventDefault();
+    this.pen = { start, x: event.clientX, y: event.clientY, moved: false };
+    // Moves keep coming here when the Pencil leaves the reader; a pointer the browser no longer tracks is skipped.
+    try {
+      this.readerHost.setPointerCapture(event.pointerId);
+    } catch {}
+    event.target.closest('.text-layer')?.classList.add('selecting');
+  }
+
+  penMove(event) {
+    const pen = this.pen;
+    if (!pen || event.pointerType !== 'pen') return;
+    if (!pen.moved && Math.hypot(event.clientX - pen.x, event.clientY - pen.y) < 6) return;
+    pen.moved = true;
+    // Near the top or bottom edge, the reader scrolls so a selection can run across pages.
+    const box = this.readerHost.getBoundingClientRect();
+    if (event.clientY > box.bottom - 48) this.readerHost.scrollTop += 14;
+    else if (event.clientY < box.top + 48) this.readerHost.scrollTop -= 14;
+    const end = caretAt(event.clientX, event.clientY);
+    if (end && this.reader.root.contains(end.node)) getSelection().setBaseAndExtent(pen.start.node, pen.start.offset, end.node, end.offset);
+  }
+
+  penUp(event) {
+    const pen = this.pen;
+    if (!pen || event.pointerType !== 'pen') return;
+    this.penEnd();
+    if (!pen.moved) {
+      const point = this.pointIn(event.clientX, event.clientY);
+      if (point) this.openAt(point.start, point.rect);
+      return;
+    }
+    const sel = selectionIn(this.reader.root);
+    if (!sel || sel.collapsed) return;
+    const [start, end] = trimRange(this.content.text, Math.min(sel.start, sel.end), Math.max(sel.start, sel.end));
+    if (end > start) this.codeSelection(start, end, sel.rect);
+  }
+
+  penEnd() {
+    this.pen = null;
+    this.reader?.root.querySelectorAll('.selecting').forEach(el => el.classList.remove('selecting'));
+  }
+
+  // Shown under a selection made with a finger, while the editor is closed.
+  offerCodeButton() {
+    const sel = touchFirst() && this.visible && this.reader && !this.pen && !Editor.el ? selectionIn(this.reader.root) : null;
+    this.codeButton.hidden = !sel || sel.collapsed;
+    if (this.codeButton.hidden) return;
+    // Below the selection: Safari's own menu sits above it.
+    placeFloating(this.codeButton, new DOMRect(sel.rect.left, sel.rect.bottom + 28, 0, 0));
+  }
+
+  codeTouchSelection() {
+    this.codeButton.hidden = true;
+    const sel = this.reader && selectionIn(this.reader.root);
+    if (!sel || sel.collapsed) return;
+    const [start, end] = trimRange(this.content.text, Math.min(sel.start, sel.end), Math.max(sel.start, sel.end));
+    if (end > start) this.codeSelection(start, end, sel.rect);
   }
 
   codeSelection(start, end, rect) {

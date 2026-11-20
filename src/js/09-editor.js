@@ -17,12 +17,13 @@ const Editor = {
     if (options.choices) this.renderChoices();
     else this.renderForm();
     placeFloating(this.el, options.anchor);
-    document.addEventListener('mousedown', this.onOutside, true);
+    // pointerdown rather than mousedown: the Apple Pencil, which draws without mouse events, closes it too.
+    document.addEventListener('pointerdown', this.onOutside, true);
   },
 
   close() {
     if (!this.el) return;
-    document.removeEventListener('mousedown', this.onOutside, true);
+    document.removeEventListener('pointerdown', this.onOutside, true);
     this.el.remove();
     this.el = null;
     const { onClose } = this.state;
@@ -85,7 +86,8 @@ const Editor = {
         this.saveButton));
     this.renderChips();
     this.renderOptions();
-    this.search.focus();
+    // On a touch screen focus would bring up the keyboard over the list of codes, which is tapped instead.
+    if (!touchFirst()) this.search.focus();
   },
 
   options() {
@@ -149,7 +151,7 @@ const Editor = {
     } else {
       this.toggle(option.code.id);
     }
-    this.search.focus();
+    if (!touchFirst()) this.search.focus();
   },
 
   onKey(event) {

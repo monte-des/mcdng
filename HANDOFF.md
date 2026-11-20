@@ -42,6 +42,7 @@ Requisiti originali dell'utente, tutti da soddisfare nell'arco delle tre fasi:
 - `MCdng.html`: il tool pronto all'uso, un unico file di circa 2,3 MB, offline.
 - `MCdng-extension.zip`: la cartella dell'estensione per Chrome ed Edge (stessa app + pulsante "Save to MCdng"), da installare con "Load unpacked".
 - `mcdng-source.zip`: sorgenti, script di build, librerie, test e questo documento.
+- **Dal 20 novembre 2026 il codice sta su GitHub**: repository pubblico `monte-des/mcdng` (account dell'utente). Ogni push su `main` ricostruisce e pubblica la web app su **https://monte-des.github.io/mcdng/** (`.github/workflows/pages.yml`, GitHub Pages con sorgente "GitHub Actions"). È l'indirizzo da aggiungere alla schermata Home dell'iPad. L'app Claude di GitHub ha accesso a quel repository.
 
 Le librerie sono dentro il file: non serve internet per usarlo.
 
@@ -84,8 +85,9 @@ Mammoth non era disponibile, quindi c'è un **lettore DOCX interno senza dipende
 
 ### Build
 ```
-python3 build.py        →  dist/MCdng.html  e  dist/extension/
+python3 build.py        →  dist/MCdng.html,  dist/extension/  e  dist/web/
 ```
+`dist/web/` è la web app per GitHub Pages e per la schermata Home dell'iPad: `index.html` (la stessa pagina di `MCdng.html` con manifest, icona per la Home e registrazione del service worker), `sw.js` (da `src/web/sw.js`, con il nome della cache legato all'hash della pagina), `manifest.webmanifest`, `icons/` (disegnate da `src/web/icons/make_icons.py`: piene e opache, perché iPadOS arrotonda da sé e rende nera la trasparenza).
 `src/template.html` contiene i segnaposto `/* @inline … */`. Per `MCdng.html` tutto viene inlineato. Per l'estensione gli script diventano file separati (`app.js`, `pdf.min.js`, `pdf.worker.min.js`) perché le pagine delle estensioni non eseguono script inline; gli stili restano inline; vengono copiati `src/extension/*`, le icone, le licenze, e viene scritto `manifest.json` (versione in `VERSION` dentro `build.py`). `/* @inline fonts */` genera le regole `@font-face` con i caratteri di `vendor/fonts/` in base64 (Figtree e Source Serif 4, sottoinsiemi Latin e Latin Extended, circa 0,3 MB). I file in `src/js/` vengono concatenati **in ordine di nome** in un unico modulo, quindi condividono lo stesso scope. Il build si ferma se un file inlineato contiene `</script` o `</style`.
 
 ### Struttura dei sorgenti
@@ -173,6 +175,24 @@ mcdng/
   - senza progetto, il paper aspetta e viene proposto con un dialogo all'apertura di un progetto;
   - gli elementi vengono "presi" in un'unica transazione, così due schede di MCdng non importano lo stesso paper.
 - **Popup:** stati "Saved to “Progetto”", "Saved, waiting for a project", "Not saved" (con il motivo) e il pulsante "Open MCdng".
+
+### iPad e Google Drive (quinta chat, 20 novembre 2026)
+Richiesta dell'utente: usare MCdng anche sull'iPad (8ª generazione, 2020, Apple Pencil di 1ª generazione), lavorando **sugli stessi dati del Mac, non in contemporanea**. Il progetto dell'utente sta sul suo **Google Drive personale** e il Mac lo apre attraverso Google Drive for desktop.
+- **Perché Drive:** sull'iPad ogni browser usa WebKit, che non ha `showDirectoryPicker` (verificato su caniuse a novembre 2026). Un'app nativa che apre la cartella dall'app File è stata scartata: l'integrazione di Google Drive con File è fragile, e l'installazione con Xcode scade ogni 7 giorni senza Developer Program.
+- **Due store, una interfaccia** (`02-disk.js`): `FolderStore` (File System Access, come prima) e `DriveStore` (`02-drive.js`). `Disk.mode` è `'folder'` dove esiste `showDirectoryPicker`, altrimenti `'drive'`; `?storage=drive` forza Drive (test). Il resto dell'app usa solo `Disk.*` con percorsi relativi alla cartella del progetto.
+- **Accesso a Google** (`Google` in `02-drive.js`): flusso OAuth implicito con redirect (`response_type=token`), scope `https://www.googleapis.com/auth/drive` (serve tutto Drive perché i file del progetto li ha creati Drive for desktop, non MCdng). Il token dura un'ora e sta in `localStorage` (`mcdng.google`). All'apertura di un progetto si tenta un accesso silenzioso (`prompt=none`); quando scade, la barra mostra "Sign in to sync", che ricarica la pagina e torna nella stessa sezione. Google sconsiglia il flusso implicito per le SPA ma lo mantiene; il flusso con codice e PKCE richiederebbe un client secret per i client di tipo Web. Il client ID è pubblico per natura: Google lo accetta solo dall'origine e dal redirect registrati (`https://monte-des.github.io` e `https://monte-des.github.io/mcdng/`). **`GOOGLE_CLIENT_ID` in `02-drive.js` va riempito con quello creato dall'utente** (vedi sezione 13); vuoto, la pagina sull'iPad dice che Drive non è ancora configurato.
+- **Copia sul dispositivo** (`Mirror`, IndexedDB `mcdng-drive`): una voce per file e cartella con id su Drive, md5 dell'ultima versione in pari, contenuto (Blob o null se è solo su Drive), `dirty`, `rev`, `copyOf`; più la coda `trash`. Si salva sempre prima qui, poi si sincronizza: MCdng funziona offline come sul Mac.
+- **Sincronizzazione** (`Sync`), un passo alla volta:
+  - `pull`: elenca la cartella su Drive per livelli (gruppi di 40 cartelle per richiesta) e aggiorna la copia; i file rimossi sull'altro dispositivo spariscono, quelli cambiati là vengono riscaricati, e se `project.json` è cambiato su entrambi i lati segnala il conflitto;
+  - `push`: invia i file cambiati (project.json per ultimo), crea le cartelle mancanti, sposta nel cestino di Drive (30 giorni) ciò che è stato rimosso; prima di sovrascrivere `project.json` controlla che su Drive l'md5 sia ancora quello noto;
+  - le cartelle dei documenti rinominate usano la **copia lato Drive** (`files.copy`), quindi i PDF non vengono ricaricati;
+  - `prefetch` scarica in background tutto ciò che manca (prima i testi estratti, poi i paper, mai `backups/`), così il progetto funziona offline.
+- **Conflitti** (anche sul Mac): se `project.json` è cambiato sia qui sia sull'altro dispositivo, il dialogo "Changed on two devices" chiede quale versione tenere; l'altra viene copiata in `backups/conflict-<data>-other-device.json` o `-this-device.json`. Sul Mac (`Saver.unchanged` in `03-project.js`) prima di ogni salvataggio si confronta data e dimensione di `project.json` con l'ultima lettura o scrittura; se è cambiato ma il testo è identico si prosegue. Tornando in primo piano (`App.refresh`), se il file è stato cambiato altrove e qui non c'è nulla da salvare, il progetto si ricarica da solo con il messaggio "Updated with the changes saved on your other device".
+- **Regola per l'utente:** chiudere il progetto su un dispositivo prima di aprirlo sull'altro, e lasciare a Drive for desktop il tempo di sincronizzare.
+- **Web app** (`dist/web/`): service worker stale-while-revalidate (la versione nuova arriva all'apertura successiva); ignora le richieste a Google. Manifest `standalone`.
+- **Tocco e Apple Pencil** (`11-coding.js`): la Pencil fa da evidenziatore (eventi `pointer` con `pointerType: 'pen'`; un `touchstart` con `touchType === 'stylus'` viene bloccato per fermare scroll e selezione di Safari solo per la penna); un tocco della Pencil o del dito su un passaggio codificato apre il segmento (`caretAt` + `pointIn`); una selezione fatta col dito (pressione lunga) mostra sotto il pulsante "Code selection". Sul touch l'editor non mette il fuoco nel campo di ricerca, per non aprire la tastiera sopra l'elenco dei code. Gli export usano il foglio di condivisione (`navigator.share` con file) e ripiegano sul download.
+- **CSS:** `@media (pointer: coarse)` alza i controlli (42px, piccoli 34px), i campi a 16px (Safari non zooma), niente evidenziazione al tocco né selezione del testo dell'interfaccia; `@media (max-width: 900px) and (min-width: 801px)` per l'iPad in verticale (barra in alto con solo il pallino di stato, colonna dei code 236px).
+- `globalThis.MCdng` espone `App`, `Sync`, `Saver`, `commit` e `project` per la console e i test.
 
 ### Modello del testo e delle codifiche
 - Ogni documento viene convertito in un **testo canonico** (`content.text`). I segmenti sono intervalli `[start, end)` di offset in quel testo, e questo vale per entrambe le viste.
@@ -408,7 +428,7 @@ Restyling completo nella seconda chat (28 ottobre 2026); il riferimento è `DESI
 
 ## 10. Test
 
-- `tests/` contiene `harness.py`, le fixture (PDF a due colonne di 3 pagine, PDF di 30 pagine, DOCX con titoli ed elenchi, TXT, copie per i test sui nomi) e tredici script `test_*.py`. `test_document_fields.py` prova i tre tipi di campo (scheda, tabella, ricerca, filtro della Review, CSV, rimozione di un'opzione, riapertura) e il suggerimento sotto Parent code. `test_metadata.py` (fixture generate da `fixtures/make_metadata_fixtures.py`) verifica l'estrazione offline e il completamento da Crossref con risposte simulate. `test_extension.py` carica davvero l'estensione in Chromium e salva paper da pagine servite su `localhost:8766` (`fixtures/article.html`, `nopdf.html`, e due indirizzi che imitano IEEE Xplore: un PDF a un indirizzo senza `.pdf` e una pagina che lo mostra in un iframe). Il harness blocca per default ogni richiesta a Crossref e DataCite, così i test non dipendono dalla rete. `test_review_export.py` controlla con asserzioni i tre formati dell'export della Review, con un sottocodice e i nomi dei livelli. `test_insights.py` controlla anche lo stemmer di Porter sui casi di riferimento eseguendo `14-text.js` da solo, ed è un vero test con asserzioni.
+- `tests/` contiene `harness.py`, le fixture (PDF a due colonne di 3 pagine, PDF di 30 pagine, DOCX con titoli ed elenchi, TXT, copie per i test sui nomi) e diciotto script `test_*.py`. `test_drive.py` prova Google Drive con un Drive finto (`fakedrive.py`, che risponde via route di Playwright all'OAuth e all'API v3): nuovo progetto, import e codifica sincronizzati, cartella rinominata copiata da Drive, modifiche dall'altro dispositivo, conflitto, apertura offline con il PDF, secondo dispositivo vuoto, token scaduto. `test_folder_sync.py` prova i conflitti sul Mac con una cartella sincronizzata. `test_web_app.py` prova manifest, icone e service worker offline. `test_touch.py` prova Pencil (tratto e tocco, vista Text e Pages), tocco col dito e selezione col dito, in una finestra 810×1080 con touch. `test_document_fields.py` prova i tre tipi di campo (scheda, tabella, ricerca, filtro della Review, CSV, rimozione di un'opzione, riapertura) e il suggerimento sotto Parent code. `test_metadata.py` (fixture generate da `fixtures/make_metadata_fixtures.py`) verifica l'estrazione offline e il completamento da Crossref con risposte simulate. `test_extension.py` carica davvero l'estensione in Chromium e salva paper da pagine servite su `localhost:8766` (`fixtures/article.html`, `nopdf.html`, e due indirizzi che imitano IEEE Xplore: un PDF a un indirizzo senza `.pdf` e una pagina che lo mostra in un iframe). Il harness blocca per default ogni richiesta a Crossref e DataCite, così i test non dipendono dalla rete. `test_review_export.py` controlla con asserzioni i tre formati dell'export della Review, con un sottocodice e i nomi dei livelli. `test_insights.py` controlla anche lo stemmer di Porter sui casi di riferimento eseguendo `14-text.js` da solo, ed è un vero test con asserzioni.
 - Avvio: `python3 tests/run_all.py`, dopo aver eseguito `python3 build.py`.
   - Servono Python, `pip install playwright` e `playwright install chromium`.
 - **Come funzionano:**
@@ -423,13 +443,14 @@ Restyling completo nella seconda chat (28 ottobre 2026); il riferimento è `DESI
 
 ## 11. Limiti noti
 
-- Solo Chrome ed Edge desktop.
+- Cartelle sul computer: solo Chrome ed Edge desktop. Altrove (iPad, Safari) solo progetti su Google Drive, dalla web app.
+- iPad: provato solo in Chromium con touch emulato e una Pencil simulata da eventi `pointer`, e con un Google Drive finto; il primo uso vero su iPad e con Google reale può far emergere dettagli (accesso nella web app a schermo intero, comportamento della Pencil con Safari). Il token di Google dura un'ora: dopo, "Sign in to sync" ricarica la pagina. La web app non ha l'estensione Save to MCdng: sull'iPad i PDF si salvano in File e si importano.
 - I PDF scansionati vanno prima passati con l'OCR (fuori da MCdng).
 - Nella vista Text dei PDF compaiono anche intestazioni, piè di pagina e numeri di pagina, perché sono testo del file. Con impaginazioni complesse l'ordine dei paragrafi può essere imperfetto; la vista Pages resta sempre fedele.
 - I limiti di un segmento non si possono modificare: va cancellato e ricodificato.
 - Non è possibile codificare selezionando il testo da tastiera, solo col mouse.
 - Non c'è un "annulla" generale. Per i dati del codebook esiste lo storico; per i segmenti no.
-- Nessuna protezione se lo stesso progetto è aperto in due finestre o su due computer contemporaneamente: l'ultimo salvataggio vince.
+- Due dispositivi aperti insieme sullo stesso progetto: `project.json` è protetto (dialogo "Changed on two devices", la versione scartata finisce in `backups/`), ma non c'è fusione automatica delle modifiche; due finestre sullo stesso computer non sono protette.
 - Non c'è un'interfaccia per ripristinare un backup: si fa a mano copiando un file da `backups/` su `project.json`. Un backup precedente all'upgrade delle cartelle non è compatibile con la nuova struttura.
 - La Review crea tutte le card insieme: con molte migliaia di segmenti potrebbe rallentare.
 - Metadati online: Crossref non è stato provato dal vivo, perché l'ambiente di sviluppo non raggiunge la rete; le risposte sono simulate nei test con il formato reale dell'API. Senza DOI, la ricerca per titolo dipende dalla qualità del titolo letto dal PDF.
@@ -468,6 +489,11 @@ Proposta originale, conservata per riferimento:
 - riepilogo del framework (domande, approccio, livelli, dimensioni) e ultime decisioni del journal.
 
 Scelte dell'utente: frequenze per code, espressioni di 2-3 parole e termini caratteristici (niente frequenze per documento); nella pagina riassuntiva i temi che affiorano, gli incroci tra temi e documenti e le keyword con la loro intensità (niente numeri di avanzamento); tabelle con export CSV e versione stampabile; una sola sezione "Insights" con due schede.
+
+### iPad: da completare con l'utente (20 novembre 2026)
+1. L'utente crea il client OAuth in Google Cloud (progetto "MCdng", Google Drive API attiva, schermata di consenso External in modalità Testing con la sua Gmail come utente di prova, scope `.../auth/drive`, client di tipo Web application con origine `https://monte-des.github.io` e redirect `https://monte-des.github.io/mcdng/`) e manda il **client ID**.
+2. Si scrive il client ID in `GOOGLE_CLIENT_ID` (`src/js/02-drive.js`), si fa push: GitHub Pages ripubblica.
+3. L'utente prova sull'iPad: Safari → indirizzo → Condividi → Aggiungi alla schermata Home → Open from Google Drive. Raccogliere i problemi del primo uso reale (accesso Google in modalità standalone, Pencil).
 
 ### Fase 3: integrazione e uso continuativo
 - **Fatto (terza chat):** metadati da file e Crossref/DataCite; estensione del browser con "Save to MCdng". L'estensione copre anche l'idea di "tenerlo aperto come Zotero" senza server locale.
@@ -515,6 +541,10 @@ L'utente ha giudicato il risultato "un ottimo inizio, buon funzionamento".
 10. **Metadati automatici** come in Zotero: lettura dal file sempre (anche offline), completamento da Crossref/DataCite con la rete, Look up details e Find details online con revisione, nuovi campi Volume, Issue, Pages (anche nel CSV come `volume`, `issue`, `article_pages`).
 11. **Estensione "Save to MCdng"**: MCdng come estensione di Chrome/Edge; un clic sulla pagina di un articolo salva il PDF nel progetto aperto. Moduli rinumerati (05-metadata, 17-inbox).
 12. **Correzione di Save to MCdng**: i PDF aperti nel visualizzatore di Chrome con un indirizzo senza `.pdf` e i PDF dentro un iframe (IEEE Xplore) davano "This page does not link a PDF". Ora il PDF si riconosce dai primi byte; due nuovi casi in `test_extension.py` (server locale che imita IEEE).
+
+**Quinta chat (19–20 novembre 2026):**
+15. **Estensione "Impossibile accedere al file"**: Chrome legge un'estensione non pacchettizzata dalla sua cartella; i file erano stati spostati o tolti da iCloud ("Ottimizza spazio"). Spiegato all'utente di tenere la cartella fuori da iCloud e ricaricarla.
+16. **GitHub e iPad**: repository `monte-des/mcdng`, pubblicazione su GitHub Pages, versione per iPad con progetti su Google Drive, Apple Pencil e interfaccia al tocco, conflitti tra dispositivi anche sul Mac (vedi sezione 5 "iPad e Google Drive").
 
 **Quarta chat (1 novembre 2026):**
 13. **Campi dei documenti di tipo Options e Tags** (vedi Documents e il modello dati); domanda dell'utente: Q1, Q2, Q3, SB a scelta multipla e tag colorati.

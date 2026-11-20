@@ -3,12 +3,13 @@
 This tool has been developed with Claude Opus 5.5, with the only purpose of being helpful through the master's thesis of the owner. It is not intended to harm or overstep existing coding tols (either open source or not), but to be tailored to the owner's needs. 
 [M. Monterisi]
 
-A local tool for qualitative coding of papers in a literature review. It runs in Google Chrome or Microsoft Edge, works offline and keeps every project in a folder on your computer. It comes in two forms built from the same source:
+A local tool for qualitative coding of papers in a literature review. It works offline and keeps every project in a folder: on the computer in Google Chrome or Microsoft Edge, or on Google Drive from the iPad. It comes in three forms built from the same source:
 
 - `dist/MCdng.html`: a single HTML file, opened with a double click.
 - `dist/extension/`: the same app as a browser extension, which adds a **Save to MCdng** button to the toolbar.
+- `dist/web/`: the same app as a web app, published at https://monte-des.github.io/mcdng/ by `.github/workflows/pages.yml` at every push to `main`. On the iPad it is added to the Home Screen and opens projects from Google Drive.
 
-Both open the same project folders. The single-file version is also published at https://monte-des.github.io/mcdng/ by `.github/workflows/pages.yml` at every push to `main`.
+All three open the same projects. A project folder on Google Drive is opened on the computer through Google Drive for desktop and on the iPad through the web app.
 
 ## Using it
 
@@ -22,6 +23,16 @@ A project folder contains:
 - `backups/`: a copy of `project.json` from each day the project was opened
 
 Copy the folder to back up or move a project.
+
+### On the iPad
+
+1. Open https://monte-des.github.io/mcdng/ in Safari, then Share → **Add to Home Screen**.
+2. Open MCdng from the Home Screen, choose **Open from Google Drive** and sign in with Google.
+3. Choose the project folder. Every file of the project is kept on the iPad too, so it works without a connection; changes go to Google Drive when there is one.
+
+With the Apple Pencil, draw over a passage to select it and code it, or tap a coded passage to open it. With a finger, scroll as usual; a long press selects text, and **Code selection** codes it.
+
+Close the project on one device before opening it on the other. If a project was changed on both, MCdng asks which version to keep and copies the other into `backups/`.
 
 ### Installing the extension
 
@@ -52,7 +63,8 @@ Files in `src/js/` are concatenated in name order into one module:
 | File | Role |
 | --- | --- |
 | `01-util.js` | DOM helper, formatting, colors, CSV |
-| `02-disk.js` | Project folder access (File System Access API) |
+| `02-disk.js` | Where projects are stored: folders on the computer (File System Access API), and the `Disk` interface |
+| `02-drive.js` | Projects on Google Drive: sign-in, the Drive API, the copy on the device and its sync |
 | `03-project.js` | State, autosave, queries and all changes with the history log |
 | `04-extract.js` | PDF, DOCX and TXT text extraction, and what a PDF says about itself |
 | `05-metadata.js` | Bibliographic details: from the file, and from Crossref or DataCite |
@@ -70,7 +82,7 @@ Files in `src/js/` are concatenated in name order into one module:
 | `17-inbox.js` | Papers saved from the browser by the extension |
 | `18-main.js` | App shell and project lifecycle |
 
-`src/extension/` holds the extension's own files: `background.js` (Save to MCdng), the popup, and the icons with the script that draws them.
+`src/web/` holds the web app's service worker, manifest and Home Screen icons (with the script that draws them). `src/extension/` holds the extension's own files: `background.js` (Save to MCdng), the popup, and the icons with the script that draws them.
 
 `vendor/pdfjs/` holds the pdf.js 5.6.205 legacy build (Apache License 2.0). `vendor/fonts/` holds Figtree and Source Serif 4 (SIL Open Font License), which `build.py` embeds as `@font-face` rules.
 
@@ -78,7 +90,7 @@ Files in `src/js/` are concatenated in name order into one module:
 
 ## Tests
 
-`tests/` holds Playwright tests that drive the built app in headless Chromium, with the folder picker replaced by the browser's private file system and Crossref replaced by canned answers. `test_extension.py` loads the extension and saves papers from pages served on localhost. Install Playwright (`pip install playwright` and `playwright install chromium`), build, then run:
+`tests/` holds Playwright tests that drive the built app in headless Chromium, with the folder picker replaced by the browser's private file system and Crossref replaced by canned answers. `test_extension.py` loads the extension and saves papers from pages served on localhost. `test_drive.py` uses a fake Google Drive (`fakedrive.py`); `test_touch.py` codes with a simulated Apple Pencil and finger in an iPad-sized window. Install Playwright (`pip install playwright` and `playwright install chromium`), build, then run:
 
 ```
 python3 tests/run_all.py

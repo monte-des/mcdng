@@ -1,12 +1,15 @@
-"""Builds MCdng from src/ in two forms:
+"""Builds MCdng from src/ in three forms:
 
   dist/MCdng.html   a single self-contained file that runs offline from file://
   dist/extension/   the same app as a Chrome and Edge extension, with the Save to MCdng button
+  dist/web/         the same app as a web app to publish (GitHub Pages) and add to the iPad's Home Screen,
+                    with a service worker that keeps it working offline
 
 Usage: python3 build.py
 """
 
 import base64
+import hashlib
 import json
 import re
 import shutil
@@ -17,6 +20,7 @@ SRC = ROOT / "src"
 DIST = ROOT / "dist"
 OUT = DIST / "MCdng.html"
 EXTENSION = DIST / "extension"
+WEB = DIST / "web"
 FONTS = ROOT / "vendor" / "fonts"
 VERSION = "2.0.0"
 
@@ -131,10 +135,42 @@ def build_extension() -> None:
     print(f"Wrote {EXTENSION.relative_to(ROOT)}/ ({sum(f.stat().st_size for f in EXTENSION.rglob('*') if f.is_file()) / 1e6:.1f} MB)")
 
 
+# Added to the page of the web app: the manifest, the Home Screen icon and name, and the service worker.
+WEB_HEAD = """<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MCdng">
+<meta name="theme-color" content="#f5f4f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+"""
+WEB_SCRIPT = """<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js');
+</script>
+"""
+
+
+def build_web() -> None:
+    if WEB.exists():
+        shutil.rmtree(WEB)
+    (WEB / "icons").mkdir(parents=True)
+    html = OUT.read_text(encoding="utf-8")
+    html = html.replace("<title>MCdng</title>", f"<title>MCdng</title>\n{WEB_HEAD}", 1).replace("</body>", f"{WEB_SCRIPT}</body>", 1)
+    (WEB / "index.html").write_text(html, encoding="utf-8")
+    # The cache name changes with the page, so a new version replaces the old one on the device.
+    digest = hashlib.sha256(html.encode()).hexdigest()[:12]
+    (WEB / "sw.js").write_text(read(SRC / "web" / "sw.js").replace("__VERSION__", f"{VERSION}-{digest}"), encoding="utf-8")
+    shutil.copy(SRC / "web" / "manifest.webmanifest", WEB / "manifest.webmanifest")
+    for icon in (SRC / "web" / "icons").glob("*.png"):
+        shutil.copy(icon, WEB / "icons" / icon.name)
+    print(f"Wrote {WEB.relative_to(ROOT)}/ ({sum(f.stat().st_size for f in WEB.rglob('*') if f.is_file()) / 1e6:.1f} MB)")
+
+
 def main() -> None:
     DIST.mkdir(exist_ok=True)
     build_file()
     build_extension()
+    build_web()
 
 
 if __name__ == "__main__":

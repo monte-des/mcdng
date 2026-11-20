@@ -123,11 +123,28 @@ function toCSV(header, rows, delimiter) {
   return '\uFEFF' + [header, ...rows].map(row => row.map(csvCell).join(delimiter)).join('\r\n');
 }
 
-function download(filename, content, type) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
+// Saves a file made by MCdng. On a touch screen (iPad) the share sheet saves it to Files or Drive, or sends it,
+// since a download link is unreliable in a Home Screen app; elsewhere, or when sharing is refused, a download.
+async function download(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const file = typeof File === 'function' && new File([blob], filename, { type });
+  if (touchFirst() && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(blob);
   const a = h('a', { href: url, download: filename });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Whether the main input is a finger or a pen (iPad), rather than a mouse or trackpad.
+function touchFirst() {
+  return matchMedia('(pointer: coarse)').matches;
 }

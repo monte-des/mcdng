@@ -1,5 +1,4 @@
 dist/
-site/
 tests/screenshots/
 __pycache__/
 .DS_Store

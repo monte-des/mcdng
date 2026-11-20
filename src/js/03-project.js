@@ -43,15 +43,19 @@ function normalizeProject(data) {
   return { ...base, ...data, format: FORMAT, documents, fields, framework: { ...base.framework, ...data.framework }, keywords: { ...base.keywords, ...data.keywords } };
 }
 
+// Saves project.json shortly after each change. With a folder on the computer, it first checks that the file is
+// still the one MCdng last read or wrote: a sync app (Google Drive, iCloud) may have brought in a version saved on
+// another device, which is then not overwritten silently ('conflict', decided by the user in App).
 const Saver = {
   timer: null,
   queue: Promise.resolve(),
   status: 'saved',
   error: null,
+  base: null, // folder only: { stamp, text } of project.json as last read or written here
 
   schedule() {
     project.modified = nowISO();
-    this.setStatus('pending');
+    if (this.status !== 'conflict') this.setStatus('pending');
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.flush(), 600);
   },
@@ -61,9 +65,49 @@ const Saver = {
     if (!project || this.status !== 'pending') return this.queue;
     const json = JSON.stringify(project, null, 1);
     this.queue = this.queue
-      .then(() => Disk.write(PROJECT_FILE, json))
-      .then(() => this.setStatus('saved'), err => this.setStatus('error', err));
+      .then(() => this.unchanged())
+      .then(async same => {
+        if (!same) return;
+        await Disk.write(PROJECT_FILE, json);
+        await this.remember(json);
+        this.setStatus('saved');
+      })
+      .catch(err => this.setStatus('error', err));
     return this.queue;
+  },
+
+  async remember(text) {
+    this.base = Disk.mode === 'folder' ? { stamp: await FolderStore.stamp(PROJECT_FILE), text } : null;
+  },
+
+  // Whether project.json is as MCdng left it; when not, raises the conflict and resolves with false.
+  async unchanged() {
+    if (!this.base) return true;
+    const stamp = await FolderStore.stamp(PROJECT_FILE).catch(() => null);
+    if (stamp === this.base.stamp) return true;
+    const text = stamp && await Disk.readText(PROJECT_FILE).catch(() => null);
+    // Removed, or rewritten with the same content: nothing to lose.
+    if (!text || text === this.base.text) return true;
+    this.setStatus('conflict');
+    bus.emit('conflict', { text });
+    return false;
+  },
+
+  // Folder only, when MCdng comes back to the front: picks up a version saved on another device. Resolves with
+  // its text when the project here has no unsaved change and can simply be reloaded.
+  async incoming() {
+    if (!this.base || this.status === 'conflict') return null;
+    await this.queue;
+    const stamp = await FolderStore.stamp(PROJECT_FILE).catch(() => null);
+    if (!stamp || stamp === this.base.stamp) return null;
+    const text = await Disk.readText(PROJECT_FILE).catch(() => null);
+    if (!text || text === this.base.text) return null;
+    if (this.status === 'pending') {
+      this.setStatus('conflict');
+      bus.emit('conflict', { text });
+      return null;
+    }
+    return text;
   },
 
   setStatus(status, error = null) {

@@ -2,6 +2,7 @@
 
 const Dialog = {
   // Opens a modal built from `body` and resolves with the value returned by the chosen button's handler.
+  // `body` may be a function given `finish`, for choices made inside the body, such as a list of projects.
   // `wide` is true for the widest dialog (comparisons) or 'medium' for forms with rows of controls.
   open({ title, body, buttons, initialFocus, wide = false }) {
     return new Promise(resolve => {
@@ -23,7 +24,7 @@ const Dialog = {
       }));
       dialog.append(h('form', { method: 'dialog', class: 'dialog-form' },
         h('h2', { class: 'dialog-title', text: title }),
-        h('div', { class: 'dialog-body' }, body),
+        h('div', { class: 'dialog-body' }, typeof body === 'function' ? body(finish) : body),
         h('div', { class: 'dialog-actions' }, actions)));
       dialog.addEventListener('cancel', event => {
         event.preventDefault();

@@ -180,6 +180,17 @@ a:hover { text-decoration-color: var(--ink); }
 
 .topbar-end { display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; }
 
+/* Choosing a project on Google Drive. */
+.pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.pick-row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 0;
+  border-radius: var(--radius); background: var(--surface-2); color: var(--ink); text-align: left; cursor: pointer;
+}
+.pick-row:hover, .pick-row:focus-visible { background: var(--surface-3); }
+.pick-name { font-weight: 600; }
+.pick-meta { color: var(--muted); font-size: 12.5px; }
+
+.status-action[hidden] { display: none; }
 .save-status { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .save-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--positive); }
 .save-status.pending::before { background: var(--notice); }
@@ -605,7 +616,7 @@ select.input { padding-right: 6px; cursor: pointer; }
   padding: 12px 16px;
   border-bottom: 1px solid var(--rule);
 }
-.doc-picker { width: auto; max-width: min(560px, 60%); font-weight: 500; }
+.doc-picker { width: auto; min-width: 0; max-width: min(560px, 60%); flex: 0 1 auto; font-weight: 500; }
 .zoom { width: auto; }
 
 .reader-host { flex: 1; min-height: 0; overflow: auto; position: relative; outline: none; }
@@ -1026,6 +1037,40 @@ mark.term { background: none; color: inherit; font-weight: 600; text-decoration:
   .text-reader { grid-template-columns: 40px minmax(0, 1fr); padding-right: 16px; }
   .start-title { font-size: 56px; }
 }
+
+/* iPad portrait: the sections fit the top bar, the status keeps its dot. */
+
+@media (max-width: 900px) and (min-width: 801px) {
+  .topbar { gap: 12px; }
+  .nav button { padding: 0 12px; }
+  .save-status { font-size: 0; gap: 0; }
+  .coding-side { width: 236px; }
+  .doc-detail { width: 300px; }
+  .coding-toolbar .segmented button { padding: 0 11px; }
+}
+
+/* Touch screens (iPad): larger targets, no hover-only controls, no tap delay, no text selection outside the
+   reading text, and inputs at 16px so Safari does not zoom into them. */
+
+@media (pointer: coarse) {
+  :root { --control: 42px; }
+  html, body { overscroll-behavior: none; }
+  button, select, label, .nav, .topbar, .side-tabs, .segmented, .chip { -webkit-user-select: none; user-select: none; }
+  button, a, input, select, textarea, label { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .input, select.input, textarea.input, .tag-new { font-size: 16px; }
+  .btn.small { height: 34px; padding: 0 14px; }
+  .nav button { height: 40px; }
+  .segmented button, .toggles button { height: 36px; }
+  .check { padding: 8px; }
+  .check input { width: 20px; height: 20px; }
+  .tag-toggle, .tag-new { height: 34px; }
+  .icon-btn { min-width: 40px; min-height: 40px; }
+  .keywords .action-col .btn { opacity: 1; }
+}
+
+/* Under a selection made with a finger: codes it, while Safari's own menu sits above the selection. */
+.code-float { position: fixed; z-index: 30; box-shadow: var(--float-shadow); }
+.code-float[hidden] { display: none; }
 
 /* Print: the visible page of Insights on white paper, without the controls. */
 
