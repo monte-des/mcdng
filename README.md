@@ -1,5 +1,8 @@
 # MCdng
 
+This tool has been developed with Claude Opus 5.5, with the only purpose of being helpful through the master's thesis of the owner. It is not intended to harm or overstep existing coding tols (either open source or not), but to be tailored to the owner's needs. 
+[M. Monterisi]
+
 A local tool for qualitative coding of papers in a literature review. It runs in Google Chrome or Microsoft Edge, works offline and keeps every project in a folder on your computer. It comes in two forms built from the same source:
 
 - `dist/MCdng.html`: a single HTML file, opened with a double click.
