@@ -40,6 +40,11 @@ function normalizeProject(data) {
   // Fields added in later versions get their empty values, so older projects open unchanged.
   const documents = (data.documents ?? []).map(d => ({ volume: '', issue: '', articlePages: '', ...d, meta: { ...emptyDocMeta(), ...d.meta } }));
   const fields = (data.fields ?? []).map(f => ({ type: 'text', options: [], ...f }));
+  // Options made before they had colours take the sections' colours in order.
+  for (const field of fields) {
+    field.options = field.options.map(o => ({ ...o }));
+    for (const option of field.options) if (!option.color) option.color = Fields.nextColor(field);
+  }
   return { ...base, ...data, format: FORMAT, documents, fields, framework: { ...base.framework, ...data.framework }, keywords: { ...base.keywords, ...data.keywords } };
 }
 
@@ -268,6 +273,11 @@ const Codes = {
 
 // Custom document fields. A text field holds a string; an options field (a fixed list, such as Q1, Q2, Q3, SB)
 // and a tags field (coloured tags, added while working) hold the ids of the options chosen, in any number.
+// Options take the sections' colours in turn (owner's choice, 20 November 2026): a chosen option is edged with
+// that section's gradient, and its colour (the section's ink) marks it in the table and the Review filters.
+const OPTION_ZONES = [
+  ['documents', '#2c7446'], ['coding', '#6343c4'], ['review', '#b8355f'], ['codebook', '#985a12'], ['insights', '#1d6784'],
+];
 const FIELD_TYPES = [
   ['text', 'Text', 'Free text, such as a country or a study design.'],
   ['options', 'Options', 'A fixed list to tick, any number at once, such as Q1, Q2, Q3, SB.'],
@@ -295,8 +305,14 @@ const Fields = {
     return project.documents.filter(d => this.text(d, field)).length;
   },
 
+  // The section whose colour an option has, or null for a colour chosen by hand.
+  zone(option) {
+    return OPTION_ZONES.find(([, color]) => color === option.color)?.[0] ?? null;
+  },
+
   nextColor(field) {
-    const used = new Map(CODE_PALETTE.map(c => [c, 0]));
+    const palette = field.type === 'options' ? OPTION_ZONES.map(([, color]) => color) : CODE_PALETTE;
+    const used = new Map(palette.map(c => [c, 0]));
     for (const o of field.options) if (used.has(o.color)) used.set(o.color, used.get(o.color) + 1);
     return [...used].sort((a, b) => a[1] - b[1])[0][0];
   },
@@ -424,7 +440,7 @@ const Actions = {
     const clean = name.replace(/\s+/g, ' ').trim();
     const same = field.options.find(o => o.name.toLowerCase() === clean.toLowerCase());
     if (same) return same;
-    const option = { id: uid(), name: clean, color: field.type === 'tags' ? Fields.nextColor(field) : null };
+    const option = { id: uid(), name: clean, color: Fields.nextColor(field) };
     field.options.push(option);
     commit('fields');
     return option;

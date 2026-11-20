@@ -555,6 +555,7 @@ L'utente ha giudicato il risultato "un ottimo inizio, buon funzionamento".
 17. **File di progetto** (zip attraverso File, anche iCloud): vedi sezione 5.
 18. **Insights dentro Codebook**: Insights non è più una sezione della barra in alto ma l'ultima scheda del Codebook, dopo History (`CodebookView` crea `InsightsView` e la mostra o nasconde; la vista tiene i suoi topic e le sue sotto-schede Overview e Keywords, con "Print or save as PDF" nella riga sotto le schede). La zona azzurra di Insights è stata tolta.
 19. **Fondo neutro**: il fondo e i grigi non hanno più la tinta calda (`--bg` #f6f6f8). Due bozze di restyle (Material 3 completo, poi colori di sezione sui pulsanti) sono state mostrate e rifiutate dall'utente; non sono state pubblicate.
+20. **Colori delle opzioni**: ogni opzione di un campo Options prende a turno il colore di una sezione (Documents, Coding, Review, Codebook, Insights; `OPTION_ZONES` in `03-project.js`, salvato come l'inchiostro della sezione in `option.color`). Un'opzione scelta ha il bordo con il gradiente pastello della sezione, come la sezione attiva nella barra in alto; il colore segna l'opzione anche nella tabella dei documenti e nei filtri della Review. Le opzioni dei progetti esistenti ricevono i colori all'apertura; un colore cambiato a mano in Edit document fields fa da bordo pieno.
 
 **Quarta chat (1 novembre 2026):**
 13. **Campi dei documenti di tipo Options e Tags** (vedi Documents e il modello dati); domanda dell'utente: Q1, Q2, Q3, SB a scelta multipla e tag colorati.

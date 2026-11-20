@@ -382,15 +382,17 @@ class DocumentsView extends View {
       }));
     }
     const chosen = new Set(Fields.chosen(doc, f).map(o => o.id));
+    const tags = f.type === 'tags';
     const toggle = option => h('button', {
-      type: 'button', class: f.type === 'tags' ? 'tag-toggle' : '', 'aria-pressed': String(chosen.has(option.id)),
+      type: 'button', class: tags ? 'tag-toggle' : '', 'aria-pressed': String(chosen.has(option.id)),
       style: option.color ? { '--tag': option.color } : null,
+      'data-zone': tags ? null : Fields.zone(option),
       onclick: event => {
         const on = event.currentTarget.getAttribute('aria-pressed') !== 'true';
         event.currentTarget.setAttribute('aria-pressed', String(on));
         Actions.toggleFieldOption(doc.id, f.id, option.id, on);
       },
-    }, option.color && swatch(option.color), option.name);
+    }, tags && option.color && swatch(option.color), option.name);
     const group = (cls, items) => h('div', { class: cls, role: 'group', 'aria-label': f.name }, items);
 
     if (f.type === 'options') {
@@ -441,7 +443,7 @@ class DocumentsView extends View {
     };
 
     const optionRow = (f, o) => h('div', { class: 'option-item' },
-      f.type === 'tags' && h('input', {
+      h('input', {
         type: 'color', class: 'color-input small', value: o.color, 'aria-label': `Colour of ${o.name}`,
         onchange: event => Actions.updateFieldOption(f.id, o.id, { color: event.target.value }),
       }),

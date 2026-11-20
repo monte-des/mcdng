@@ -70,7 +70,13 @@ async def main():
         data = await saved(pg)
         print('fields:', [(f['name'], f['type'], [o['name'] for o in f['options']]) for f in data['fields']])
         assert [o['name'] for o in data['fields'][0]['options']] == ['Q1', 'Q2', 'Q3', 'SB']
-        assert all(o['color'] for o in data['fields'][1]['options']) and not data['fields'][0]['options'][0]['color']
+        # Options take the sections' colours in turn; tags the code palette. All different within a field.
+        options, tags = [[o['color'] for o in f['options']] for f in data['fields'][:2]]
+        assert options == ['#2c7446', '#6343c4', '#b8355f', '#985a12'], options
+        assert all(tags) and len(set(tags)) == len(tags)
+        edges = await pg.eval_on_selector_all('.doc-detail .toggles button', 'bs => bs.map(b => b.dataset.zone)')
+        print('option edges:', edges)
+        assert edges == ['documents', 'coding', 'review', 'codebook']
         await pg.click('dialog >> text=Done')
 
         # Tick Q1 and SB, a tag, and add a new tag from the panel.

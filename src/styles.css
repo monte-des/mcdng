@@ -36,6 +36,7 @@
   --z-coding: linear-gradient(115deg, #c9b8f5, #e8c9ef);
   --z-review: linear-gradient(115deg, #f7c5d6, #ffd3b8);
   --z-codebook: linear-gradient(115deg, #f4dc9e, #f8c9a7);
+  --z-insights: linear-gradient(115deg, #b8e2ef, #c9d2fb);
   --zone: var(--z-coding);
   --zone-tint: #efe9fc;
   --zone-ink: #6343c4;
@@ -423,6 +424,18 @@ select.input { padding-right: 6px; cursor: pointer; }
 .toggles { display: inline-flex; flex-wrap: wrap; align-self: flex-start; gap: 2px; padding: 3px; border-radius: 18px; background: var(--surface-3); }
 .toggles button { height: 30px; min-width: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: none; color: var(--ink-2); font-weight: 500; cursor: pointer; }
 .toggles button:hover { color: var(--ink); }
+/* A chosen option is edged in its colour: a section's gradient, as the current section in the top bar, or the
+   colour chosen for it by hand. */
+.toggles button { border: 2px solid transparent; }
+.toggles button[data-zone="documents"] { --edge: var(--z-documents); }
+.toggles button[data-zone="coding"] { --edge: var(--z-coding); }
+.toggles button[data-zone="review"] { --edge: var(--z-review); }
+.toggles button[data-zone="codebook"] { --edge: var(--z-codebook); }
+.toggles button[data-zone="insights"] { --edge: var(--z-insights); }
+.toggles button[style][aria-pressed="true"] {
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--edge, linear-gradient(var(--tag), var(--tag))) border-box;
+  box-shadow: 0 1px 2px rgba(13, 13, 13, 0.06);
+}
 .toggles button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--rule), 0 1px 2px rgba(13, 13, 13, 0.06); }
 .tag-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tag-toggle {
