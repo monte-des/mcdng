@@ -10,7 +10,7 @@
 // accepts it from the address registered with it.
 
 // The OAuth client ID made for MCdng's web address in Google Cloud. Tests set MCDNG_CLIENT_ID before the app runs.
-const GOOGLE_CLIENT_ID = globalThis.MCDNG_CLIENT_ID ?? '';
+const GOOGLE_CLIENT_ID = globalThis.MCDNG_CLIENT_ID ?? '1045024909712-fqjt19mq4rlj3f6i0gt2jo45m0n09f75.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
