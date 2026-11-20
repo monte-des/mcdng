@@ -1,5 +1,25 @@
 // Utilities shared by every module.
 
+// MCdng runs on Safari 15 and later (iPadOS 15): the two newer built-ins it uses are filled in where missing
+// (both arrived in Safari 15.4). Its code has no regular expressions with lookbehind, which Safari reads only
+// from 16.4: one in the app's code stops the whole page there.
+if (!Array.prototype.at) {
+  Object.defineProperty(Array.prototype, 'at', {
+    value(index) {
+      const i = Math.trunc(index) || 0;
+      return this[i < 0 ? this.length + i : i];
+    },
+    configurable: true,
+    writable: true,
+  });
+}
+globalThis.structuredClone ??= value => JSON.parse(JSON.stringify(value));
+
+// The first year from 1900 to 2099 in a text, not part of a longer number; '' when there is none.
+function yearIn(text) {
+  return /(?:^|\D)((?:19|20)\d{2})(?!\d)/.exec(text ?? '')?.[1] ?? '';
+}
+
 function h(tag, props, ...children) {
   const el = document.createElement(tag);
   if (props) {

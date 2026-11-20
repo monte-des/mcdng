@@ -33,6 +33,20 @@ async def main():
         start = await pg.eval_on_selector_all('.start-actions button', 'bs => bs.map(b => b.textContent)')
         print('offline:', await pg.inner_text('.start-title'), start, '| icon', icon)
         assert start == ['Open from Google Drive', 'Open project file', 'New project'] and icon == 200
+        await ctx.set_offline(False)
+
+        # A browser that cannot run MCdng's code gets a message, not an empty page; a working one never sees it.
+        await pg.wait_for_timeout(3500)
+        assert not await pg.query_selector('.boot-error')
+        broken = ROOT / 'dist' / 'web' / 'broken.html'
+        html = (ROOT / 'dist' / 'web' / 'index.html').read_text(encoding='utf-8')
+        broken.write_text(html.replace('// Utilities shared by every module.', 'const = ;', 1), encoding='utf-8')
+        page2 = await (await b.new_context()).new_page()
+        await page2.goto(URL + 'broken.html')
+        await page2.wait_for_selector('.boot-error', timeout=8000)
+        print('broken page:', (await page2.inner_text('.boot-error')).replace('\n', ' | ')[:200])
+        broken.unlink()
+        errors[:] = [e for e in errors if 'Unexpected token' not in e]
         print('ERRORS', errors)
         await b.close()
 

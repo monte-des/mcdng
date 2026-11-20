@@ -84,8 +84,7 @@ function pdfMetadata(info, xmp, content) {
   meta.journal = first(get('prism:publicationName')).trim();
   meta.volume = first(get('prism:volume')).trim();
   meta.issue = first(get('prism:number')).trim();
-  const year = text => /(?<!\d)(19|20)\d{2}(?!\d)/.exec(text ?? '')?.[0] ?? '';
-  meta.year = year(first(get('prism:coverDate'))) || year(first(get('prism:publicationDate')));
+  meta.year = yearIn(first(get('prism:coverDate'))) || yearIn(first(get('prism:publicationDate')));
   meta.doi = findDoi([first(get('prism:doi')), first(get('dc:identifier')), info.Subject, info.Keywords].filter(Boolean).join(' '));
   // Elsevier and others describe the article in the subject: "Teaching and Teacher Education, 103 (2021) 103245. doi:…"
   const cite = /^([^,]{4,120}),\s*(\d+)\s*\(((?:19|20)\d{2})\)/.exec(info.Subject ?? '');
@@ -95,7 +94,7 @@ function pdfMetadata(info, xmp, content) {
     meta.year ||= cite[3];
   }
   const head = content.text.slice(0, content.pages?.[1]?.end ?? 6000);
-  meta.year ||= year(/©\s*((?:19|20)\d{2})/.exec(head)?.[1]) || year(/(?:published|available)\s+online[^\n]{0,40}?((?:19|20)\d{2})/i.exec(head)?.[1]);
+  meta.year ||= yearIn(/©\s*((?:19|20)\d{2})/.exec(head)?.[1]) || yearIn(/(?:published|available)\s+online[^\n]{0,40}?((?:19|20)\d{2})/i.exec(head)?.[1]);
   return meta;
 }
 

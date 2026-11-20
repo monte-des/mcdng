@@ -121,6 +121,9 @@ def build_extension() -> None:
         return f'<script type="module" src="{script_file(spec)}"></script>'
 
     html = read(SRC / "template.html")
+    # The message for browsers too old to start MCdng is an inline script, which extensions may not run; the
+    # extension only runs in Chrome and Edge anyway.
+    html = re.sub(r'<!-- A browser too old.*?</script>\n', '', html, count=1, flags=re.S)
     html = re.sub(r'<script type="module">\s*/\* @inline ([^*]+?) \*/\s*</script>', external, html)
     html = re.sub(r"/\* @inline ([^*]+?) \*/", inline, html)
     (EXTENSION / "app.html").write_text(html, encoding="utf-8")

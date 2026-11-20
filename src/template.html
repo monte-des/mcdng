@@ -11,6 +11,34 @@
 </style>
 </head>
 <body>
+<!-- A browser too old for MCdng stops on its code and would show an empty page: this says so instead, with the
+     error, in code every browser reads. -->
+<script>
+(function () {
+  var shown = false;
+  function fail(detail) {
+    if (shown || window.MCdng) return;
+    shown = true;
+    var box = document.createElement('div');
+    box.className = 'boot-error';
+    box.innerHTML = '<h1>MCdng could not start</h1><p>This browser is probably too old for MCdng, which needs Safari 15 or later. On the iPad, update iPadOS in Settings, General, Software Update, then open MCdng again.</p>';
+    if (detail) {
+      var p = document.createElement('p');
+      p.className = 'boot-detail';
+      p.textContent = detail;
+      box.appendChild(p);
+    }
+    document.body.appendChild(box);
+  }
+  window.addEventListener('error', function (event) {
+    var detail = event.message || '';
+    setTimeout(function () { fail(detail); }, 1500);
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () { fail(''); }, 3000);
+  });
+})();
+</script>
 <!-- pdf.js (Apache License 2.0) runs on the main thread: the worker module registers itself as globalThis.pdfjsWorker. -->
 <script type="module">
 /* @inline vendor/pdfjs/pdf.worker.min.mjs */

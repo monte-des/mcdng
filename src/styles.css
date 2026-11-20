@@ -1082,6 +1082,11 @@ mark.term { background: none; color: inherit; font-weight: 600; text-decoration:
 .code-float { position: fixed; z-index: 30; box-shadow: var(--float-shadow); }
 .code-float[hidden] { display: none; }
 
+/* Shown instead of an empty page when the browser cannot run MCdng (template.html). */
+.boot-error { max-width: 34rem; margin: 18vh auto 0; padding: 0 24px; font-family: var(--sans); color: var(--ink); }
+.boot-error h1 { font-weight: 600; font-size: 28px; letter-spacing: -0.02em; }
+.boot-detail { color: var(--muted); font-size: 13px; font-family: ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+
 /* Print: the visible page of Insights on white paper, without the controls. */
 
 @media print {

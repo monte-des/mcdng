@@ -482,7 +482,8 @@ const Actions = {
       return existing;
     }
     let text = content.text.slice(start, end);
-    if (content.reflow) text = text.replace(/(?<!\n)\n(?!\n)/g, ' ');
+    // Single line breaks become spaces; blank lines between paragraphs stay.
+    if (content.reflow) text = text.replace(/(^|[^\n])\n(?!\n)/g, '$1 ');
     const seg = {
       id: uid(), docId: doc.id, start, end, text,
       page: pageAt(content, start), pageEnd: pageAt(content, end - 1),

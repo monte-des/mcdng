@@ -32,7 +32,7 @@ function fileMetadata(meta, content, fileName) {
   const out = {
     title: meta.title || base.replace(/_+/g, ' ').trim(),
     authors: meta.authors ?? '',
-    year: meta.year || (/(?<!\d)(19|20)\d{2}(?!\d)/.exec(base)?.[0] ?? ''),
+    year: meta.year || yearIn(base),
     journal: meta.journal ?? '',
     volume: meta.volume ?? '',
     issue: meta.issue ?? '',
