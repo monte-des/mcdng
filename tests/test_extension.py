@@ -1,7 +1,9 @@
 """The browser extension: MCdng as an extension page, and Save to MCdng from an article page or a PDF.
 Pages are served from tests/fixtures on localhost:8766, standing in for a publisher's site. Like IEEE Xplore,
 the site also serves a PDF at an address without .pdf (/stampPDF/getPDF.jsp) and a page that shows it in an
-iframe (/stamp/stamp.jsp)."""
+iframe (/stamp/stamp.jsp). It also stands in for journals whose article page is an e-reader: Open Journal
+Systems (a pdf.js reader in an iframe whose address names the PDF in file=), a reader that holds a PDF no link
+leads to (PDFViewerApplication), and a page whose only way to the PDF is a "Download PDF" link."""
 
 import asyncio, functools, http.server, json, tempfile, threading
 from harness import *
@@ -29,6 +31,30 @@ class Publisher(http.server.SimpleHTTPRequestHandler):
             page = '<!doctype html><title>IEEE Xplore Full-Text PDF:</title><body style="margin:0">' \
                    '<iframe src="/stampPDF/getPDF.jsp?tp=&arnumber=2&ref=" style="width:100%;height:100vh;border:0"></iframe>'
             return self.send(page.encode(), 'text/html; charset=utf-8')
+        if self.path.startswith('/ojs/article/view/'):
+            page = ('<!doctype html><title>Article view</title><header><a href="/ojs/article/view/1">Back</a></header>'
+                    '<iframe src="/ojs/plugins/generic/pdfJsViewer/pdf.js/web/viewer.html?file=%2Fojs%2Farticle%2Fdownload%2F5933%2F2131%2F12345"></iframe>')
+            return self.send(page.encode(), 'text/html; charset=utf-8')
+        if self.path.startswith('/ojs/plugins/'):
+            return self.send(b'<!doctype html><title>PDF.js viewer</title><div id="viewer"></div>', 'text/html; charset=utf-8')
+        if self.path.startswith('/ojs/article/download/'):
+            # Another paper: the 30-page fixture with a comment after its end, so it is not a duplicate.
+            return self.send((FIXTURES / 'long_2018.pdf').read_bytes() + b'\n% served by the journal\n', 'application/octet-stream')
+        if self.path.startswith('/reader/book'):
+            return self.send(b'<!doctype html><title>Reader</title><iframe src="/reader/frame.html"></iframe>', 'text/html; charset=utf-8')
+        if self.path.startswith('/reader/frame.html'):
+            # A reader holding a PDF that no address of the page leads to.
+            script = ('<script>fetch("/reader/content.bin").then(r => r.arrayBuffer()).then(b => {'
+                      'const bytes = new Uint8Array(b); globalThis.PDFViewerApplication = { url: "blob:reader", '
+                      'pdfDocument: { getData: async () => bytes } }; });</script>')
+            return self.send(f'<!doctype html><title>Frame</title>{script}'.encode(), 'text/html; charset=utf-8')
+        if self.path.startswith('/reader/content.bin'):
+            return self.send((FIXTURES / 'download.pdf').read_bytes(), 'application/octet-stream')
+        if self.path.startswith('/landing/'):
+            page = '<!doctype html><title>Landing</title><p>Abstract.</p><a class="btn" href="/files/getfile?id=7">Download PDF</a>'
+            return self.send(page.encode(), 'text/html; charset=utf-8')
+        if self.path.startswith('/files/getfile'):
+            return self.send((FIXTURES / 'scan0042.pdf').read_bytes(), 'application/octet-stream')
         return super().do_GET()
 
 
@@ -101,6 +127,14 @@ async def main():
         result = await save(f'{SITE}/stamp/stamp.jsp?tp=&arnumber=2')
         print('PDF inside the page:', result)
         assert result['state'] == 'saved', result
+
+        # E-readers: Open Journal Systems, a reader holding its PDF, a page with only a Download PDF link.
+        for label, url in [('Open Journal Systems reader', f'{SITE}/ojs/article/view/5933/2131'),
+                           ('reader holding the PDF', f'{SITE}/reader/book/1'),
+                           ('Download PDF link', f'{SITE}/landing/7')]:
+            result = await save(url)
+            print(f'{label}:', result)
+            assert result['state'] == 'saved', result
         await app.wait_for_timeout(1200)
         titles = [d['title'] for d in await project_docs(app)]
         print('  ', titles)

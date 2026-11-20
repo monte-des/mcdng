@@ -41,7 +41,7 @@ Close the project on one device before opening it on the other. If a project was
 2. Choose **Load unpacked** and select the `extension` folder.
 3. Pin MCdng to the toolbar.
 
-On the page of an article, or on its PDF (also a PDF shown inside a page, as on IEEE Xplore), click the MCdng button: the PDF is downloaded with your own access and saved to the project open in MCdng, with the details the publisher's page declares. With no project open, the paper waits and is offered when one opens.
+On the page of an article, or on its PDF (also a PDF shown inside a page or in a journal's e-reader, as on IEEE Xplore or Open Journal Systems), click the MCdng button: the PDF is downloaded with your own access and saved to the project open in MCdng, with the details the publisher's page declares. With no project open, the paper waits and is offered when one opens.
 
 ## Sections
 

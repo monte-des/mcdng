@@ -42,11 +42,45 @@ function readArticlePage() {
     lastPage: one('citation_lastpage', 'prism.endingPage'),
     doi: one('citation_doi', 'dc.identifier', 'prism.doi'),
     pdfUrl: one('citation_pdf_url'),
-    // PDFs shown inside the page, as IEEE Xplore and many library proxies do.
-    embedded: [...document.querySelectorAll('iframe[src], embed[src], object[data]')]
-      .map(el => el.getAttribute('src') ?? el.getAttribute('data'))
-      .filter(src => /pdf/i.test(src) && !/^(about|javascript|data):/i.test(src)),
+    // PDFs shown inside the page, as IEEE Xplore and many library proxies do. A reader inside the page (pdf.js,
+    // as in Open Journal Systems) names its PDF in the file= part of its address, which comes first.
+    embedded: [...document.querySelectorAll('iframe[src], embed[src], object[data]')].flatMap(el => {
+      try {
+        const url = new URL(el.getAttribute('src') ?? el.getAttribute('data'), location.href);
+        if (!/^https?:$/.test(url.protocol) || !(/pdf/i.test(url.href) || url.searchParams.has('file'))) return [];
+        const file = url.searchParams.get('file');
+        return file ? [new URL(file, url).href, url.href] : [url.href];
+      } catch {
+        return [];
+      }
+    }),
+    // Download links of the page: "Download", "PDF", or addresses with /download/ or .pdf.
+    links: [...document.querySelectorAll('a[href]')]
+      .filter(a => /^https?:/.test(a.href) && (/\/download\/|\.pdf($|[?#])/i.test(a.href) || /^\s*(download|pdf|download pdf|full[- ]text pdf)\s*$/i.test(a.textContent)))
+      .map(a => a.href)
+      .slice(0, 6),
   };
+}
+
+// Runs in every frame of the page, in the page's own scripts: a pdf.js reader (the e-reader of many journals and
+// libraries) already holds the PDF it shows, even when its address cannot be downloaded again.
+async function readViewerPdf() {
+  const app = globalThis.PDFViewerApplication;
+  if (!app?.pdfDocument) return null;
+  const bytes = await app.pdfDocument.getData();
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { url: /^https?:/.test(app.url ?? '') ? app.url : location.href, data: btoa(binary) };
+}
+
+async function viewerPdf(tabId) {
+  try {
+    const results = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, world: 'MAIN', func: readViewerPdf });
+    const found = results.map(r => r.result).find(Boolean);
+    return found && { url: found.url, bytes: Uint8Array.from(atob(found.data), c => c.charCodeAt(0)) };
+  } catch {
+    return null;
+  }
 }
 
 // Runs in the page: downloads with the page's own cookies and access, returned as base64.
@@ -115,20 +149,34 @@ function fileNameFor(url, details) {
 
 const isPdf = bytes => new TextDecoder().decode(bytes.subarray(0, 5)) === '%PDF-';
 
-// The PDF of a tab, tried in this order: the PDF the publisher's page declares, the tab itself (a PDF in the
-// browser's viewer often has an address that does not end in .pdf, so only its first bytes tell), then PDFs
-// shown inside the page. Resolves with { url, bytes }, or null when none of them is a PDF.
+// The PDF of a tab, tried in this order: the PDF the publisher's page declares; the tab itself (a PDF in the
+// browser's viewer often has an address that does not end in .pdf, so only its first bytes tell); the PDF a
+// reader in the page holds; PDFs shown inside the page; the page's download links. Each is accepted only when
+// its first bytes say PDF. Resolves with { url, bytes }, or null when none of them is a PDF.
 async function findPdf(tabId, tab, page) {
-  const candidates = [page?.pdfUrl, tab.url, ...(page?.embedded ?? [])]
-    .filter(Boolean)
-    .map(url => new URL(url, tab.url).href);
-  for (const url of new Set(candidates)) {
+  const first = [page?.pdfUrl, tab.url].filter(Boolean).map(url => new URL(url, tab.url).href);
+  const later = [...(page?.embedded ?? []), ...(page?.links ?? [])];
+  const tried = new Set();
+  const attempt = async url => {
+    if (tried.has(url)) return null;
+    tried.add(url);
     try {
       const bytes = await download(tabId, url);
-      if (isPdf(bytes)) return { url, bytes };
+      return isPdf(bytes) ? { url, bytes } : null;
     } catch {
       // Not reachable with this access: try the next candidate.
+      return null;
     }
+  };
+  for (const url of first) {
+    const found = await attempt(url);
+    if (found) return found;
+  }
+  const shown = await viewerPdf(tabId);
+  if (shown && isPdf(shown.bytes)) return shown;
+  for (const url of later) {
+    const found = await attempt(url);
+    if (found) return found;
   }
   return null;
 }
