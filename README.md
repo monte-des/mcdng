@@ -5,7 +5,7 @@ A local tool for qualitative coding of papers in a literature review. It runs in
 - `dist/MCdng.html`: a single HTML file, opened with a double click.
 - `dist/extension/`: the same app as a browser extension, which adds a **Save to MCdng** button to the toolbar.
 
-Both open the same project folders.
+Both open the same project folders. The single-file version is also published at https://monte-des.github.io/mcdng/ by `.github/workflows/pages.yml` at every push to `main`.
 
 ## Using it
 
